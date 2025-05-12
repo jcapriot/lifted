@@ -41,78 +41,8 @@ using ndarray::aligned_array;
 using ndarray::aligned_ndarray;
 
 using namespace wavelets;
-//using wavelets::Haar;
-//using wavelets::Daubechies2;
-//using wavelets::Daubechies3;
-//using wavelets::Daubechies4;
-//using wavelets::Daubechies5;
-//using wavelets::Daubechies6;
-//using wavelets::BiorSpline3_1;
-//using wavelets::ReverseBiorSpline3_1;
-//using wavelets::BiorSpline4_2;
-//using wavelets::ReverseBiorSpline4_2;
-//using wavelets::BiorSpline2_4;
-//using wavelets::ReverseBiorSpline2_4;
-//
-//using wavelets::LiftingTransform;
 
-template<typename VT>
-static void fill_arr(VT& arr) {
-	using T = typename VT::value_type;
 
-	size_t n = arr.size();
-	T x0 = -10.0;
-	T xF = 10.0;
-	T dx = (xF - x0) / (n - 1);
-	T x;
-	for (size_t i = 0; i < n; ++i)
-		arr[i] = std::sin(x0 + dx * i);
-}
-
-template<typename VT>
-static void fill_arr(VT& arr, size_t n2) {
-	using T = typename VT::value_type;
-
-	size_t n = arr.size() / n2;
-	T x0 = -10.0;
-	T xF = 10.0;
-	T dx = (xF - x0) / (n - 1);
-	T x;
-	for (size_t i = 0; i < n; ++i) {
-		x = std::sin(x0 + dx * i);
-		for (size_t j = 0; j < n2; ++j) {
-			arr[i * n2 + j] = x * (j+1);
-		}
-	}
-}
-
-template<typename VT>
-static void fill_even_odd(const VT& WAVELETS_RESTRICT arr, VT& WAVELETS_RESTRICT even, VT& WAVELETS_RESTRICT odd) {
-	using T = typename VT::value_type;
-	size_t n = arr.size();
-	size_t m = even.size();
-	for (size_t i = 0, j = 0; i < m; ++i, j += 2) {
-		even[i] = arr[j];
-		odd[i] = arr[j + 1];
-	}
-}
-
-template<typename VT>
-static void fill_even_odd(
-	const VT& WAVELETS_RESTRICT arr,
-	VT& WAVELETS_RESTRICT even, VT& WAVELETS_RESTRICT odd,
-	size_t n2
-){
-	using T = typename VT::value_type;
-	size_t n = arr.size() / n2;
-	size_t m = even.size() / n2;
-	for (size_t i = 0, j = 0; i < m; ++i, j += 2) {
-		for (size_t i2 = 0; i2 < n2; ++i2) {
-			even[i * n2 + i2] = arr[j * n2 + i2];
-			odd[i * n2 + i2] = arr[(j + 1) * n2 + i2];
-		}
-	}
-}
 
 template<typename WVLT>
 static void verify_transform(size_t n) {
@@ -405,5 +335,7 @@ int main(int argc, char* argv[]) {
 		time_transform<Daubechies6<double>>(n, n_repeats);
 		time_transform<BiorSpline3_1<double>>(n, n_repeats);
 		time_transform<ReverseBiorSpline3_1<double>>(n, n_repeats);
+		time_transform<CDF9_7<double>>(n, n_repeats);
+		time_transform<ReverseCDF9_7<double>>(n, n_repeats);
 	}
 }

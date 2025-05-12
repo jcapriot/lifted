@@ -6,7 +6,7 @@
 #endif
 
 #if !(__cplusplus >= 201103L || _MSVC_LANG+0L >= 201103L)
-#error This file requires at least C++11 support.
+#error This file requires at least C++20 support.
 #endif
 
 #include <vector>
