@@ -8,6 +8,9 @@
 #include <iterator>
 #include <type_traits>
 #include <tuple>
+#include <utility>
+
+#include "wavelets.hpp"
 
 namespace test_helpers {
 
@@ -64,96 +67,138 @@ namespace test_helpers {
 		}
 	}
 
-	template<typename VT, typename T = typename VT::value_type>
-		static void assert_allclose(
-			const VT& actual, const VT& desired,
-			const T rtol = 1E-7, const T atol = 0.0,
-			const bool equal_nan = true, const bool equal_inf = true
-		) {
-		size_t n = actual.size();
+	using wavelets::detail::update_s;
+	using wavelets::detail::update_d;
+	using wavelets::detail::scale;
 
-		if (actual.size() != desired.size()) {
-			throw std::invalid_argument("Size mismatch: actual.size() = " + std::to_string(actual.size()) +
-				", desired.size() = " + std::to_string(desired.size()));
-		}
+	// Define some Mock wavelets for testing purposes.
+	class WaveletSUpdate {
+	public:
+		using steps = std::tuple <
+			update_s<-5, 1.2, 1.3, 1.5, -1.2, -3.2>
+		>;
+		constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
+		using type = double;
+	};
 
-		T max_rel = 0.0;
-		T max_abs = 0.0;
+	class WaveletDUpdate {
+	public:
+		using steps = std::tuple <
+			update_d<-5, 0.5, 1.203, 4.2, 33.213>
+		>;
+		constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
-		size_t n_mismatch = 0;
+		using type = double;
+	};
 
-		for (size_t i=0; i < n; ++i) {
-			T ai = actual[i];
-			T bi = desired[i];
+	class WaveletScale {
+	public:
+		using steps = std::tuple <
+			scale<0.124>
+		>;
+		constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
-			bool ai_nan = std::isnan(ai);
-			bool bi_nan = std::isnan(bi);
-			bool ai_inf = std::isinf(ai);
-			bool bi_inf = std::isinf(bi);
+		using type = double;
+	};
 
-			if (ai_nan || bi_nan) {
-				if (!(ai_nan && bi_nan && equal_nan)) {
-					std::ostringstream oss;
-					oss << "NaN mismatch at index " << i
-						<< ": actual = " << ai << ", desired = " << bi;
-					throw std::runtime_error(oss.str());
-				}
-				continue;
-			}
+	class WaveletSDUpdate {
+	public:
+		using steps = std::tuple <
+			update_s<-5, 1.2, 1.3, 1.5, -1.2, -3.2>,
+			update_d<-5, 0.5, 1.203, 4.2, 33.213>
+		>;
+		constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
-			if (ai_inf || bi_inf) {
-				if (equal_inf) {
-					if (!(ai == bi)) {
-						std::ostringstream oss;
-						oss << "Inf mismatch at index " << i
-							<< ": actual = " << ai << ", desired = " << bi;
-						throw std::runtime_error(oss.str());
-					}
-				}
-				else {
-					std::ostringstream oss;
-					oss << "Inf value encountered but equal_inf is false at index " << i
-						<< ": actual = " << ai << ", desired = " << bi;
-					throw std::runtime_error(oss.str());
-				}
-				continue;
-			}
-			T abs_diff = std::abs(ai - bi);
-			T thresh = atol + rtol * std::abs(bi);
-			if (abs_diff > thresh) {
-				max_abs = std::max(max_abs, abs_diff);
-				max_rel = std::max(max_rel, abs_diff / std::abs(bi));
-				++n_mismatch;
-			}
-		}
-		if (n_mismatch > 0) {
-			std::ostringstream oss;
-			oss << std::setprecision(15)
-				<< "Mismatched values " << n_mismatch << " / " << desired.size() << std::endl
-				<< "Max absolute difference among violations: " << max_abs << std::endl
-				<< "Max relative difference among violations: " << max_rel << std::endl;
-			throw std::runtime_error(oss.str());
-		}
-	}
+		using type = double;
+	};
+
+	class WaveletSDUpdateScale {
+	public:
+		using steps = std::tuple <
+			update_s<-5, 1.2, 1.3, 1.5, -1.2, -3.2>,
+			update_d<-5, 1.2, 1.3, 1.5, -1.2, -3.2>,
+			scale<0.124>
+		>;
+		constexpr static size_t n_steps = std::tuple_size<steps>::value;
+
+		using type = double;
+	};
 
 	namespace detail {
 
-		template<typename Tuple>
-		struct ForEachType;
-
-		template<typename... Args>
-		struct ForEachType<std::tuple<Args...>> {
+		template<typename WVLT_, size_t N_, typename BC_>
+		struct ConfigSpec {
+			using WVLT = WVLT_;
+			using T = typename WVLT::type;
+			constexpr static size_t N = N_;
+			using BC = BC_;
 		};
 
-		template<typename... Tuples>
-		struct tuple_cat_type {
-			using type = decltype(std::tuple_cat(std::declval<Tuples>()...));
+		template<typename... Lists>
+		struct tuple_concat;
+
+		template<>
+		struct tuple_concat<> {
+			using type = std::tuple<>;
 		};
+
+		// Single list: return as is
+		template<typename List>
+		struct tuple_concat<List> {
+			using type = List;
+		};
+
+		// Two or more lists: concatenate first two, then recurse
+		template<typename... Ts1, typename... Ts2, typename... Rest>
+		struct tuple_concat<std::tuple<Ts1...>, std::tuple<Ts2...>, Rest...> {
+			using type = typename tuple_concat<std::tuple<Ts1..., Ts2...>, Rest...>::type;
+		};
+
+		// Helper to generate ConfigSpec for a given WVLT and BC over all N
+		template<typename WVLT, typename BC, size_t... Ns>
+		struct generate_for_wvlt_bc {
+			using type = std::tuple<ConfigSpec<WVLT, Ns, BC>...>;
+		};
+
+		// Generate for all BCs
+		template<typename WVLT, typename NSeq, typename... BCs>
+		struct generate_for_wvlt;
+
+		template<typename WVLT, size_t... Ns, typename... BCs>
+		struct generate_for_wvlt<WVLT, std::integer_sequence<size_t, Ns...>, BCs...> {
+		private:
+			template<typename BC>
+			using one = typename generate_for_wvlt_bc<WVLT, BC, Ns...>::type;
+
+		public:
+			using type = typename tuple_concat<one<BCs>...>::type;
+		};
+
+		// Generate for all WVLTs
+		template<typename WVLTs, typename NSeq, typename BCs>
+		struct generate_all;
+
+		template<typename... WVLTs, size_t... Ns, typename... BCs>
+		struct generate_all<std::tuple<WVLTs...>, std::integer_sequence<size_t, Ns...>, std::tuple<BCs...>> {
+		private:
+			template<typename WVLT>
+			using one = typename generate_for_wvlt<WVLT, std::integer_sequence<size_t, Ns...>, BCs...>::type;
+
+		public:
+			using type = typename tuple_concat<one<WVLTs>...>::type;
+		};
+
 	}
 
-	template<typename... Tuples>
-	using tuple_concat = typename detail::tuple_cat_type<Tuples...>::type;
+	using detail::tuple_concat;
+	using detail::generate_all;
 
-	using detail::ForEachType;
+	using TestWavelets = std::tuple<
+		WaveletSUpdate,
+		WaveletDUpdate,
+		WaveletScale,
+		WaveletSDUpdate,
+		WaveletSDUpdateScale
+	>;
 }

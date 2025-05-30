@@ -84,118 +84,355 @@ namespace wavelets {
 #endif
 #endif
 
+		// Boundary conditions
+		struct ZeroBoundary {
+			static inline size_t index_of(const ptrdiff_t i, const size_t n) {
+				if ((i < 0) || (i >= n)) {
+					return n;
+				}
+				else {
+					return i;
+				}
+			}
+		};
+
+		struct ConstantBoundary {
+			static inline size_t index_of(const ptrdiff_t i, const size_t n) {
+				if (i < 0) {
+					return 0;
+				}
+				else if (i >= n) {
+					return n - 1;
+				}
+				else {
+					return i;
+				}
+			}
+		};
+
+		struct PeriodicBoundary {
+			static inline size_t index_of(const ptrdiff_t i, const size_t n) {
+				return i % n;
+			}
+		};
+
+		struct SymmetricBoundary {
+			static inline size_t index_of(const ptrdiff_t i, const size_t n) {
+				ptrdiff_t io = i;
+				while ((io >= n) || (io < 0)) {
+					if (io < 0) {
+						io = -(io + 1);
+					}
+					else {
+						io = 2 * (n - 1) - (io - 1);
+					}
+				}
+				return io;
+			}
+		};
+
+		struct ReflectBoundary {
+			static inline size_t index_of(const ptrdiff_t i, const size_t n) {
+				ptrdiff_t io = i;
+				while ((io >= n) || (io < 0)) {
+					if (io < 0) {
+						io = -io;
+					}
+					else {
+						io = 2 * (n - 1) - io;
+					}
+				}
+				return io;
+			}
+		};
+
+		// compile time unrolling of step loops
 		template<ptrdiff_t offset, auto val, auto... vals>
-		struct lift {
+		struct Lift {
+
+			constexpr static size_t n_vals = sizeof...(vals) + 1;
 
 			template<typename V>
 			static inline V apply(const V* x, const size_t i) {
-				return val * x[i + offset] + lift<offset + 1, vals...>::apply(x, i);
+				return val * x[i + offset] + Lift<offset + 1, vals...>::apply(x, i);
 			}
+
+			template<typename BC, typename V>
+			static inline V bc_apply(const V* x, const ptrdiff_t i, const size_t n) {
+				size_t i_bc = BC::index_of(i + offset, n);
+				if (i_bc == n) {
+					return Lift<offset + 1, vals...>::template bc_apply<BC>(x, i, n);
+				}
+				else {
+					return val * x[i_bc] + Lift<offset + 1, vals...>::template bc_apply<BC>(x, i, n);
+				}
+			}
+
 			template<typename V>
-			static inline V wrap_apply(const V* x, const ptrdiff_t i, const size_t n) {
-				size_t iw = (i + offset) % n;
-				return val * x[iw] + lift<offset + 1, vals...>::wrap_apply(x, i, n);
+			static inline V bc_adj_apply(const V* x, const ptrdiff_t i, const size_t n) {
+				if (i == n) {
+					return V(0.0);
+				}
+				else if (i < 0) {
+					return Lift<offset + 1, vals...>::bc_adj_apply(x, i + 1, n);
+				}
+				else {
+					return val * x[i] + Lift<offset + 1, vals...>::bc_adj_apply(x, i + 1, n);
+				}
 			}
 		};
 
 		template<ptrdiff_t offset, auto val>
-		struct lift<offset, val> {
+		struct Lift<offset, val> {
+
+			const static size_t n_vals = 1;
 
 			template<typename V>
 			static inline V apply(const V* x, const size_t i) {
 				return val * x[i + offset];
 			}
+
+			template<typename BC, typename V>
+			static inline V bc_apply(const V* x, const ptrdiff_t i, const size_t n) {
+				size_t i_bc = BC::index_of(i + offset, n);
+				if (i_bc == n) {
+					return V(0.0);
+				}
+				else {
+					return val * x[i_bc];
+				}
+			}
+
 			template<typename V>
-			static inline V wrap_apply(const V* x, const ptrdiff_t i, const size_t n) {
-				size_t iw = (i + offset) % n;
-				return val * x[iw];
+			static inline V bc_adj_apply(const V* x, const ptrdiff_t i, const size_t n) {
+				if ((i == n) || (i < 0)){
+					return V(0.0);
+				}
+				else {
+					return val * x[i];
+				}
 			}
 		};
+
+		// for adjoints with reversing the values
+		template<auto...>
+		struct ReverseValues;
+
+		template<>
+		struct ReverseValues<> {
+			template<template<auto...> class Target, auto... Result>
+			struct Apply {
+				using type = Target<Result...>;
+			};
+		};
+
+		template<auto First, auto... Rest>
+		struct ReverseValues<First, Rest...> {
+			template<template<auto...> class Target, auto... Result>
+			struct Apply {
+				using type = typename ReverseValues<Rest...>::template Apply<Target, First, Result...>::type;
+			};
+		};
+
+		// Template to bind offset before applying reversed vals
+		template<ptrdiff_t offset>
+		struct LiftWrapper {
+			template<auto... ReversedVals>
+			using type = Lift<offset, ReversedVals...>;
+		};
+
+		template<ptrdiff_t offset, auto... vals>
+		using ReversedLift = typename ReverseValues<vals...>::template Apply<
+			LiftWrapper<offset>::template type
+		>::type;
+
+		// lifting steps
 
 		template<ptrdiff_t offset, auto... vals>
 		struct update_d {
 			constexpr static size_t n_vals = sizeof...(vals);
-			using lifter = lift<offset, vals...>;
 
 			constexpr static ptrdiff_t max_offset = n_vals - 1 + offset;
 			constexpr static size_t n_front = (offset < 0) ? -offset : 0;
 			constexpr static size_t n_back = (max_offset < 0) ? 0 : max_offset;
 
-			template<typename V>
-			static inline void forward(const V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
-				// front wrap
-				for (ptrdiff_t i = 0; i < n_front; ++i)
-					d[i] += lifter::wrap_apply(s, i-1, ns);
+			constexpr static ptrdiff_t offset_r = -max_offset;
 
-				// main loop
+			constexpr static ptrdiff_t max_offset_r = n_vals - 1 + offset_r;
+			constexpr static size_t n_front_r = (offset_r < 0) ? -offset_r : 0;
+			constexpr static size_t n_back_r = (max_offset_r < 0) ? 0 : max_offset_r;
+
+			using lifter = Lift<offset, vals...>;
+			using lifter_r = ReversedLift<offset_r, vals...>;
+
+			template<typename BC, typename V>
+			static inline void forward(const V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
+
+				for (ptrdiff_t i = 0; i < n_front; ++i)
+					d[i] += lifter::template bc_apply<BC>(s, i, ns);
 				for (size_t i = n_front; i < nd - n_back; ++i)
 					d[i] += lifter::apply(s, i);
-
-				// back wrap
 				for (ptrdiff_t i = nd - n_back; i < nd; ++i)
-					d[i] += lifter::wrap_apply(s, i, ns);
+					d[i] += lifter::template bc_apply<BC>(s, i, ns);
 			}
 
-			template<typename V>
+			template<typename BC, typename V>
 			static inline void inverse(const V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
 
-				// front wrap
 				for (ptrdiff_t i = 0; i < n_front; ++i)
-					d[i] -= lifter::wrap_apply(s, i-1, ns);
-
-				// main loop
+					d[i] -= lifter::template bc_apply<BC>(s, i, ns);
 				for (size_t i = n_front; i < nd - n_back; ++i)
 					d[i] -= lifter::apply(s, i);
-
-				// back wrap
 				for (ptrdiff_t i = nd - n_back; i < nd; ++i)
-					d[i] -= lifter::wrap_apply(s, i, ns);
+					d[i] -= lifter::template bc_apply<BC>(s, i, ns);
+			}
+
+			template<typename BC, typename V>
+			static inline void forward_adjoint(V* WAVELETS_RESTRICT s, const V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
+				
+				for (ptrdiff_t i = offset, j = 1 - n_vals; i < 0; ++i, ++j) {
+					size_t io = BC::index_of(i, ns);
+					if ((io != ns) && (io != i)) {
+						s[io] += lifter_r::bc_adj_apply(d, j, nd);
+					}
+				}
+
+				for (ptrdiff_t i = 0; i < n_front_r; ++i)
+					s[i] += lifter_r::template bc_apply<ZeroBoundary>(d, i, nd);
+				for (size_t i = n_front_r; i < nd - n_back_r; ++i)
+					s[i] += lifter_r::apply(d, i);
+				for (ptrdiff_t i = nd - n_back_r; i < ns; ++i)
+					s[i] += lifter_r::template bc_apply<ZeroBoundary>(d, i, nd);
+
+				for (ptrdiff_t i = nd, j = nd + offset_r; i < nd - offset_r; ++i, ++j) {
+					size_t io = BC::index_of(i, ns);
+					if ((io != ns) && (io != i)) {
+						s[io] += lifter_r::bc_adj_apply(d, j, nd);
+					}
+				}
+			}
+
+			template<typename BC, typename V>
+			static inline void inverse_adjoint(V* WAVELETS_RESTRICT s, const V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
+
+				for (ptrdiff_t i = offset, j = 1 - n_vals; i < 0; ++i, ++j) {
+					size_t io = BC::index_of(i, ns);
+					if ((io != ns) && (io != i)) {
+						s[io] -= lifter_r::bc_adj_apply(d, j, nd);
+					}
+				}
+
+				for (ptrdiff_t i = 0; i < n_front_r; ++i)
+					s[i] -= lifter_r::template bc_apply<ZeroBoundary>(d, i, nd);
+				for (size_t i = n_front_r; i < nd - n_back_r; ++i)
+					s[i] -= lifter_r::apply(d, i);
+				for (ptrdiff_t i = nd - n_back_r; i < ns; ++i)
+					s[i] -= lifter_r::template bc_apply<ZeroBoundary>(d, i, nd);
+
+				for (ptrdiff_t i = nd, j = nd + offset_r; i < nd - offset_r; ++i, ++j) {
+					size_t io = BC::index_of(i, ns);
+					if ((io != ns) && (io != i)) {
+						s[io] -= lifter_r::bc_adj_apply(d, j, nd);
+					}
+				}
 			}
 		};
 
 		template<ptrdiff_t offset, auto... vals>
 		struct update_s {
 			constexpr static size_t n_vals = sizeof...(vals);
-			using lifter = lift<offset, vals...>;
 
 			constexpr static ptrdiff_t max_offset = n_vals - 1 + offset;
 			constexpr static size_t n_front = (offset < 0) ? -offset : 0;
 			constexpr static size_t n_back = (max_offset < 0) ? 0 : max_offset;
 
-			template<typename V>
-			static inline void forward(V* WAVELETS_RESTRICT s, const V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
-				// front wrap
-				for (ptrdiff_t i = 0; i < n_front; ++i)
-					s[i] += lifter::wrap_apply(d, i-1, nd);
+			constexpr static ptrdiff_t offset_r = -max_offset;
 
-				// main loop
+			constexpr static ptrdiff_t max_offset_r = n_vals - 1 + offset_r;
+			constexpr static size_t n_front_r = (offset_r < 0) ? -offset_r : 0;
+			constexpr static size_t n_back_r = (max_offset_r < 0) ? 0 : max_offset_r;
+
+			using lifter = Lift<offset, vals...>;
+			using lifter_r = ReversedLift<offset_r, vals...>;
+
+			template<typename BC, typename V>
+			static inline void forward(V* WAVELETS_RESTRICT s, const V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
+
+				for (ptrdiff_t i = 0; i < n_front; ++i)
+					s[i] += lifter::template bc_apply<BC>(d, i, nd);
 				for (size_t i = n_front; i < nd - n_back; ++i)
 					s[i] += lifter::apply(d, i);
-
-				// back wrap
 				for (ptrdiff_t i = nd - n_back; i < ns; ++i)
-					s[i] += lifter::wrap_apply(d, i, nd);
+					s[i] += lifter::template bc_apply<BC>(d, i, nd);
 			}
 
-			template<typename V>
+			template<typename BC, typename V>
 			static inline void inverse(V* WAVELETS_RESTRICT s, const V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
-				// front wrap
-				for (ptrdiff_t i = 0; i < n_front; ++i)
-					s[i] -= lifter::wrap_apply(d, i-1, nd);
 
-				// main loop
+				for (ptrdiff_t i = 0; i < n_front; ++i)
+					s[i] -= lifter::template bc_apply<BC>(d, i, nd);
 				for (size_t i = n_front; i < nd - n_back; ++i)
 					s[i] -= lifter::apply(d, i);
-
-				// back wrap
 				for (ptrdiff_t i = nd - n_back; i < ns; ++i)
-					s[i] -= lifter::wrap_apply(d, i, nd);
+					s[i] -= lifter::template bc_apply<BC>(d, i, nd);
+			}
+
+			template<typename BC, typename V>
+			static inline void forward_adjoint(const V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
+
+				for (ptrdiff_t i = offset, j = 1 - n_vals; i < 0; ++i, ++j) {
+					size_t io = BC::index_of(i, nd);
+					if ((io != nd) && (io != i)) {
+						d[io] += lifter_r::bc_adj_apply(s, j, ns);
+					}
+				}
+
+				for (ptrdiff_t i = 0; i < n_front_r; ++i)
+					d[i] += lifter_r::template bc_apply<ZeroBoundary>(s, i, ns);
+				for (size_t i = n_front_r; i < nd - n_back_r; ++i)
+					d[i] += lifter_r::apply(s, i);
+				for (ptrdiff_t i = nd - n_back_r; i < nd; ++i)
+					d[i] += lifter_r::template bc_apply<ZeroBoundary>(s, i, ns);
+
+
+				for (ptrdiff_t i = nd, j = nd + offset_r; i < ns - offset_r; ++i, ++j) {
+					size_t io = BC::index_of(i, nd);
+					if ((io != nd) && (io != i)) {
+						d[io] += lifter_r::bc_adj_apply(s, j, nd);
+					}
+				}
+			}
+
+			template<typename BC, typename V>
+			static inline void inverse_adjoint(const V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
+
+				for (ptrdiff_t i = offset, j = 1 - n_vals; i < 0; ++i, ++j) {
+					size_t io = BC::index_of(i, nd);
+					if ((io != nd) && (io != i)) {
+						d[io] -= lifter_r::bc_adj_apply(s, j, ns);
+					}
+				}
+
+				for (ptrdiff_t i = 0; i < n_front_r; ++i)
+					d[i] -= lifter_r::template bc_apply<ZeroBoundary>(s, i, ns);
+				for (size_t i = n_front_r; i < nd - n_back_r; ++i)
+					d[i] -= lifter_r::apply(s, i);
+				for (ptrdiff_t i = nd - n_back_r; i < nd; ++i)
+					d[i] -= lifter_r::template bc_apply<ZeroBoundary>(s, i, ns);
+
+
+				for (ptrdiff_t i = nd, j = nd + offset_r; i < ns - offset_r; ++i, ++j) {
+					size_t io = BC::index_of(i, nd);
+					if ((io != nd) && (io != i)) {
+						d[io] -= lifter_r::bc_adj_apply(s, j, nd);
+					}
+				}
 			}
 		};
 
 		template<auto val>
 		struct scale {
-			template<typename V>
+			template<typename BC, typename V>
 			static inline void forward(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd)
 			{
 				for (size_t i = 0; i < nd; ++i)
@@ -204,7 +441,7 @@ namespace wavelets {
 					s[i] *= val;
 			}
 
-			template<typename V>
+			template<typename BC, typename V>
 			static inline void inverse(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd)
 			{
 				for (size_t i = 0; i < nd; ++i)
@@ -212,34 +449,66 @@ namespace wavelets {
 				for (size_t i = 0; i < ns; ++i)
 					s[i] /= val;
 			}
+
+			template<typename BC, typename V>
+			static inline void forward_adjoint(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd)
+			{
+				forward<BC>(s, d, ns, nd);
+			}
+
+			template<typename BC, typename V>
+			static inline void inverse_adjoint(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd)
+			{
+				inverse<BC>(s, d, ns, nd);
+			}
 		};
 
-		template<typename WVLT, size_t step, size_t n_step>
+		template<typename WVLT, typename BC, size_t step, size_t n_step>
 		struct step_builder {
 
 			template<typename V>
 			static inline void forward(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
 
-				std::tuple_element_t<step, typename WVLT::steps>::forward(s, d, ns, nd);
-				step_builder<WVLT, step + 1, n_step>::forward(s, d, ns, nd);
+				std::tuple_element_t<step, typename WVLT::steps>::template forward<BC>(s, d, ns, nd);
+				step_builder<WVLT, BC, step + 1, n_step>::forward(s, d, ns, nd);
 			}
 
 			template<typename V>
 			static inline void inverse(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
 
-				step_builder<WVLT, step + 1, n_step>::inverse(s, d, ns, nd);
-				std::tuple_element_t<step, typename WVLT::steps>::inverse(s, d, ns, nd);
+				step_builder<WVLT, BC, step + 1, n_step>::inverse(s, d, ns, nd);
+				std::tuple_element_t<step, typename WVLT::steps>::template inverse<BC>(s, d, ns, nd);
+			}
+
+			template<typename V>
+			static inline void forward_adjoint(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
+
+				step_builder<WVLT, BC, step + 1, n_step>::forward_adjoint(s, d, ns, nd);
+				std::tuple_element_t<step, typename WVLT::steps>::template forward_adjoint<BC>(s, d, ns, nd);
+			}
+
+			template<typename V>
+			static inline void inverse_adjoint(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
+
+				std::tuple_element_t<step, typename WVLT::steps>::template inverse_adjoint<BC>(s, d, ns, nd);
+				step_builder<WVLT, BC, step + 1, n_step>::inverse_adjoint(s, d, ns, nd);
 			}
 		};
 
-		template<typename WVLT, size_t step>
-		struct step_builder<WVLT, step, step> {
+		template<typename WVLT, typename BC, size_t step>
+		struct step_builder<WVLT, BC, step, step> {
 
 			template<typename V>
 			static inline void forward(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {}
 			
 			template<typename V>
 			static inline void inverse(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {}
+
+			template<typename V>
+			static inline void forward_adjoint(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {}
+
+			template<typename V>
+			static inline void inverse_adjoint(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {}
 		};
 
 		template<typename T> class Haar {
@@ -253,8 +522,6 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-
-			using reverse = Haar<T>;
 		};
 
 		template<typename T> class Daubechies2 {
@@ -273,7 +540,6 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			using reverse = Daubechies2<T>;
 		};
 
 		template<typename T> class Daubechies3 {
@@ -302,7 +568,6 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			using reverse = Daubechies3<T>;
 		};
 
 		template<typename T> class Daubechies4 {
@@ -333,7 +598,6 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			using reverse = Daubechies4<T>;
 		};
 
 		template<typename T> class Daubechies5 {
@@ -365,7 +629,6 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			using reverse = Daubechies5<T>;
 		};
 
 		template<typename T> class Daubechies6 {
@@ -408,7 +671,6 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			using reverse = Daubechies6<T>;
 		};
 
 		template<typename T> class Daubechies7 {
@@ -453,11 +715,9 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			using reverse = Daubechies7<T>;
 		};
 
 		// Need to forward declare these so they can be used as the reverse of BiorSplines
-		template<typename T> class ReverseBiorSpline3_1;
 		template<typename T> class BiorSpline3_1 {
 			constexpr static T s1_m1 = -0.333333333333333333333333333333333333333333333333333333333333;
 			constexpr static T s2_p0 = -1.125;
@@ -474,7 +734,6 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			using reverse = ReverseBiorSpline3_1<T>;
 		};
 
 		template<typename T> class ReverseBiorSpline3_1 {
@@ -493,10 +752,8 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			using reverse = BiorSpline3_1<T>;
 		};
 
-		template<typename T> class ReverseBiorSpline4_2;
 		template<typename T> class BiorSpline4_2 {
 			constexpr static T s1 = -0.25;
 			constexpr static T s3 = 0.1875;
@@ -511,7 +768,6 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			using reverse = ReverseBiorSpline4_2<T>;
 		};
 
 		template<typename T> class ReverseBiorSpline4_2 {
@@ -528,10 +784,8 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			using reverse = BiorSpline4_2<T>;
 		};
 
-		template<typename T> class ReverseBiorSpline2_4;
 		template<typename T> class BiorSpline2_4 {
 			constexpr static T s1 = -0.5;
 			constexpr static T s2_0 = 0.296875;
@@ -546,7 +800,6 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			using reverse = ReverseBiorSpline2_4<T>;
 		};
 
 		template<typename T> class ReverseBiorSpline2_4 {
@@ -563,10 +816,8 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			using reverse = BiorSpline2_4<T>;
 		};
 
-		template<typename T> class ReverseBiorSpline6_2;
 		template<typename T> class BiorSpline6_2 {
 			constexpr static T s1 = -0.166666666666666666666666666666666666666666666666666666666667;
 			constexpr static T s2 = -0.5625;
@@ -584,7 +835,6 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			using reverse = ReverseBiorSpline6_2<T>;
 		};
 
 		template<typename T> class ReverseBiorSpline6_2 {
@@ -604,10 +854,8 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			using reverse = BiorSpline6_2<T>;
 		};
 
-		template<typename T> class ReverseCDF9_7;
 		template<typename T> class CDF9_7{
 			constexpr static T s1 = -1.58613434205992355842831545133740131985598525529112656778527;
 			constexpr static T s2 = -0.0529801185729614146241295675034771089920773921055534971880099;
@@ -625,7 +873,6 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			using reverse = ReverseCDF9_7<T>;
 		};
 
 		template<typename T> class ReverseCDF9_7 {
@@ -645,22 +892,32 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			using reverse = CDF9_7<T>;
 		};
 
-		template<typename WVLT> class LiftingTransform {
+		template<typename WVLT, typename BC=ZeroBoundary> class LiftingTransform {
 
 		public:
 			using type = typename WVLT::type;
+			using boundary_condition = BC;
 
 			template<typename V>
 			static void forward(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
-				step_builder<WVLT, 0, WVLT::n_steps>::forward(s, d, ns, nd);
+				step_builder<WVLT, BC, 0, WVLT::n_steps>::forward(s, d, ns, nd);
 			}
 
 			template<typename V>
 			static void inverse(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
-				step_builder<WVLT, 0, WVLT::n_steps>::inverse(s, d, ns, nd);
+				step_builder<WVLT, BC, 0, WVLT::n_steps>::inverse(s, d, ns, nd);
+			}
+
+			template<typename V>
+			static void forward_adjoint(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
+				step_builder<WVLT, BC, 0, WVLT::n_steps>::forward_adjoint(s, d, ns, nd);
+			}
+
+			template<typename V>
+			static void inverse_adjoint(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t ns, const size_t nd) {
+				step_builder<WVLT, BC, 0, WVLT::n_steps>::inverse_adjoint(s, d, ns, nd);
 			}
 
 			template<typename V>
@@ -683,8 +940,30 @@ namespace wavelets {
 				inverse(s.data(), d.data(), s.size(), d.size());
 			}
 
+			template<typename V>
+			static void forward_adjoint(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t n) {
+				forward_adjoint(s, d, n, n);
+			}
+
+			template<typename V>
+			static void inverse_adjoint(V* WAVELETS_RESTRICT s, V* WAVELETS_RESTRICT d, const size_t n) {
+				inverse_adjoint(s, d, n, n);
+			}
+
+			template<typename C1, typename C2>
+			static void forward_adjoint(C1& WAVELETS_RESTRICT s, C2& WAVELETS_RESTRICT d) {
+				forward_adjoint(s.data(), d.data(), s.size(), d.size());
+			}
+
+			template<typename C1, typename C2>
+			static void inverse_adjoint(C1& WAVELETS_RESTRICT s, C2& WAVELETS_RESTRICT d) {
+				inverse_adjoint(s.data(), d.data(), s.size(), d.size());
+			}
+
 		};
 	}
+
+	// Hard Coded Wavelets
 	using detail::Haar;
 	template<typename T>
 	using Daubechies1 = Haar<T>;
@@ -706,6 +985,45 @@ namespace wavelets {
 	using detail::CDF9_7;
 	using detail::ReverseCDF9_7;
 
+	template<typename T>
+	using AllWavelets = std::tuple<
+		Haar<T>,
+		Daubechies1<T>,
+		Daubechies2<T>,
+		Daubechies3<T>,
+		Daubechies4<T>,
+		Daubechies5<T>,
+		Daubechies6<T>,
+		Daubechies7<T>,
+		BiorSpline3_1<T>,
+		BiorSpline4_2<T>,
+		BiorSpline2_4<T>,
+		BiorSpline6_2<T>,
+		ReverseBiorSpline3_1<T>,
+		ReverseBiorSpline4_2<T>,
+		ReverseBiorSpline2_4<T>,
+		ReverseBiorSpline6_2<T>,
+		CDF9_7<T>,
+		ReverseCDF9_7<T>
+	>;
+
+
+	// Boundary Conditions
+	using detail::ZeroBoundary;
+	using detail::ConstantBoundary;
+	using detail::PeriodicBoundary;
+	using detail::SymmetricBoundary;
+	using detail::ReflectBoundary;
+
+	using BoundaryConditions = std::tuple<
+		ZeroBoundary,
+		ConstantBoundary,
+		PeriodicBoundary,
+		SymmetricBoundary,
+		ReflectBoundary
+	>;
+
+	// The Main transform function
 	using detail::LiftingTransform;
 }
 

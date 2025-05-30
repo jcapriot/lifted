@@ -36,6 +36,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec)
 
 #include "wavelets.hpp"
 #include "ndarray.hpp"
+#include "test_helpers.h"
 
 using ndarray::aligned_array;
 using ndarray::aligned_ndarray;
@@ -52,12 +53,13 @@ static void verify_transform(size_t n) {
 	for (size_t i = 0; i < n; ++i)
 		arr[i] = 0;
 	arr[n / 2] = 1.0;
-	//fill_arr(arr);
 
 	size_t m = n / 2;
 	auto evens = aligned_array<T>(m);
 	auto odds = aligned_array<T>(m);
-	fill_even_odd(arr, evens, odds);
+	test_helpers::deinterleave(arr, evens, odds);
+
+	cout << typeid(typename WVLT::steps).name() << endl;
 	
 	cout << "==========================" << endl;
 	cout << "Verifying: " << typeid(WVLT).name() << endl
@@ -84,10 +86,7 @@ static void verify_transform(size_t n) {
 	);
 
 	auto arr2 = aligned_array<T>(n);
-	for (size_t i = 0, j = 0; j < m; ++j, i += 2) {
-		arr2[i] = evens[j];
-		arr2[i + 1] = odds[j];
-	}
+	test_helpers::interleave(evens, odds, arr2);
 
 	cout << "inverse" << endl
 		<< "-------" << endl << endl
@@ -166,14 +165,14 @@ static void time_transform(size_t n, size_t n_repeats=1024) {
 	for (size_t i = 0; i < n_repeats; ++i) {
 		auto arr = aligned_array<T>(n);
 
-		fill_arr(arr);
+		test_helpers::fill_sin(arr);
 		for (size_t j = 0; j < n; ++j) {
 			arr[j] *= (i + 1);
 		}
 
 		auto evens = aligned_array<T>(m);
 		auto odds = aligned_array<T>(m);
-		fill_even_odd(arr, evens, odds);
+		test_helpers::deinterleave(arr, evens, odds);
 
 		auto evens_out = aligned_array<T>(m);
 		auto odds_out = aligned_array<T>(m);

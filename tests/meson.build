@@ -7,8 +7,8 @@ test_inc = include_directories('.')
 
 
 test_inv = executable(
-	'test_inverse', 
-	'test_inverse.cpp',
+	'test_single_levels', 
+	'test_single_levels.cpp',
 	dependencies : [gtest_dep, gtest_main_dep, wavelets_dep],
 	include_directories : test_inc,
 )
