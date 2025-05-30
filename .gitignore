@@ -352,3 +352,7 @@ MigrationBackup/
 scratch/.ipynb_checkpoints/
 
 *.exe
+
+subprojects/googletest-1.15.2/
+
+subprojects/packagecache/
