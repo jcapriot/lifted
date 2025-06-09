@@ -9,21 +9,23 @@
 #include <type_traits>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "wavelets.hpp"
 
 namespace test_helpers {
+	using std::ptrdiff_t;
 
 	template<typename VT, typename T = typename VT::value_type>
-	static void fill_sin(VT& arr, const T x0=-10, const T xF=10) {
+	static void fill_sin(VT& arr, const T x0 = -10, const T xF = 10, const T scale = 1) {
 		size_t n = arr.size();
 		T dx = (xF - x0) / (n - 1);
 		for (size_t i = 0; i < n; ++i)
-			arr[i] = std::sin(x0 + dx * i);
+			arr[i] = std::sin(x0 + dx * i) * scale;
 	}
 
 	template<typename VT, typename T = typename VT::value_type>
-	static void fill_rand(VT& arr, const unsigned int seed=0, const T min=0, const T max=1) {
+	static void fill_rand(VT& arr, const unsigned int seed = 0, const T min = 0, const T max = 1) {
 		static_assert(std::is_arithmetic_v<T>, "Container value type must be arithmetic");
 
 		std::mt19937 rng(seed);
@@ -60,12 +62,88 @@ namespace test_helpers {
 		size_t no = odd.size();
 		for (size_t i = 0, j = 0; i < no; ++i, j += 2) {
 			arr[j] = even[i];
-			arr[j+1] = odd[i];
+			arr[j + 1] = odd[i];
 		}
 		if (no != ne) {
 			arr[arr.size() - 1] = even[ne - 1];
 		}
 	}
+
+	template<typename TE, typename TO, typename VT>
+	static void stack(const TE& in1, const TO& in2, VT& arr) {
+		size_t n1 = in1.size();
+		size_t n2 = in2.size();
+		size_t ii = 0;
+		for (size_t i = 0; i < n1; ++i, ++ii)
+			arr[ii] = in1[i];
+		for (size_t i = 0; i < n2; ++i, ++ii)
+			arr[ii] = in2[i];
+	}
+
+	template<typename T>
+	struct ArrayView {
+		T* data;
+		size_t length;
+		ptrdiff_t stride;
+
+		T& operator[](size_t idx) { return data[idx * stride]; }
+		const T& operator[](size_t idx) const { return data[idx * stride]; }
+
+		size_t size() const { return length; }
+	};
+
+	template<typename T>
+	std::vector<ArrayView<T>> all_arrays_along_axis(
+		T* data,
+		const std::vector<size_t>& shape,
+		const std::vector<ptrdiff_t>& strides,
+		size_t axis)
+	{
+
+		std::vector<ArrayView<T>> lines;
+
+		// Compute total number of outer points: product of all dims except axis
+		size_t num_lines = 1;
+		for (size_t i = 0; i < shape.size(); ++i) {
+			if (i != axis) num_lines *= shape[i];
+		}
+
+		// Stride pattern for the outer axes
+		std::vector<size_t> outer_shape, outer_strides;
+		for (size_t i = 0; i < shape.size(); ++i) {
+			if (i != axis) {
+				outer_shape.push_back(shape[i]);
+				outer_strides.push_back(strides[i]);
+			}
+		}
+
+		// Iterate over all combinations of outer indices
+		std::vector<size_t> idx(outer_shape.size(), 0);
+		for (size_t i = 0; i < num_lines; ++i) {
+			// Compute flat offset for outer index
+			size_t offset = 0;
+			for (size_t j = 0, k = 0; j < shape.size(); ++j) {
+				if (j == axis) continue;
+				offset += idx[k] * strides[j];
+				++k;
+			}
+
+			lines.push_back(ArrayView<T>{
+				data + offset,
+					shape[axis],
+					strides[axis]
+			});
+
+			// Increment multi-index
+			for (int j = static_cast<int>(idx.size()) - 1; j >= 0; --j) {
+				if (++idx[j] < outer_shape[j]) break;
+				idx[j] = 0;
+			}
+		}
+
+		return lines;
+	}
+
 
 	using wavelets::detail::update_s;
 	using wavelets::detail::update_d;

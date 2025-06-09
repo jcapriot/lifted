@@ -14,6 +14,10 @@
 #include <gtest/gtest.h>
 
 
+// This test is for validating the single level transform drivers
+// for forward, inverse, forward_adjoint, and inverse_adjoints, for
+// all boundary conditions, and for both an even and odd length input.
+
 
 using namespace wavelets;
 using namespace test_helpers;
@@ -48,6 +52,7 @@ TYPED_TEST_SUITE_P(TestTrasformAndAdjoint);
 
 // 2. Define tests
 TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForwardBackward) {
+	// Test that forward and inverse are actually inverses of each other.
 
 	using WVLT = typename TestFixture::WVLT;
 	using T = typename WVLT::type;
@@ -80,7 +85,76 @@ TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForwardBackward) {
 		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
 }
 
+TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForwardStrided) {
+	// Test that the strided versions work as well
+
+	using WVLT = typename TestFixture::WVLT;
+	using T = typename WVLT::type;
+	using BC = typename TestFixture::BC;
+
+	T rtol = 1E-7;
+	T atol = 0;
+
+	constexpr size_t N = TestFixture::N;
+	constexpr size_t N_o = N / 2;
+	constexpr size_t N_e = N - N_o;
+
+	std::array<T, N> arr_in;
+	std::array<T, N_e> arr_e;
+	std::array<T, N_o> arr_o;
+	std::array<T, N> arr_out;
+
+	fill_sin(arr_in, -11, 13);
+	arr_out = arr_in;
+
+	deinterleave(arr_in, arr_e, arr_o);
+
+	LiftingTransform<WVLT, BC>::forward(arr_e, arr_o);
+
+	LiftingTransform<WVLT, BC>::forward(arr_out);
+
+	interleave(arr_e, arr_o, arr_in);
+
+	for (size_t i = 0; i < arr_out.size(); ++i)
+		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
+}
+
+TYPED_TEST_P(TestTrasformAndAdjoint, ValidateInverseStrided) {
+	// Test that the strided versions work as well
+
+	using WVLT = typename TestFixture::WVLT;
+	using T = typename WVLT::type;
+	using BC = typename TestFixture::BC;
+
+	T rtol = 1E-7;
+	T atol = 0;
+
+	constexpr size_t N = TestFixture::N;
+	constexpr size_t N_o = N / 2;
+	constexpr size_t N_e = N - N_o;
+
+	std::array<T, N> arr_in;
+	std::array<T, N_e> arr_e;
+	std::array<T, N_o> arr_o;
+	std::array<T, N> arr_out;
+
+	fill_sin(arr_in, -11, 13);
+	arr_out = arr_in;
+
+	deinterleave(arr_in, arr_e, arr_o);
+
+	LiftingTransform<WVLT, BC>::inverse(arr_e, arr_o);
+
+	LiftingTransform<WVLT, BC>::inverse(arr_out);
+
+	interleave(arr_e, arr_o, arr_in);
+
+	for (size_t i = 0; i < arr_out.size(); ++i)
+		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
+}
+
 TYPED_TEST_P(TestTrasformAndAdjoint, ValidateAdjointForwardBackward) {
+	// Test that forward_adjoint and inverse_adjoint are actually inverses of each other.
 
 	using WVLT = typename TestFixture::WVLT;
 	using T = typename WVLT::type;
@@ -113,7 +187,76 @@ TYPED_TEST_P(TestTrasformAndAdjoint, ValidateAdjointForwardBackward) {
 		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
 }
 
+TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForwardAdjointStrided) {
+	// Test that the strided versions work as well
+
+	using WVLT = typename TestFixture::WVLT;
+	using T = typename WVLT::type;
+	using BC = typename TestFixture::BC;
+
+	T rtol = 1E-7;
+	T atol = 0;
+
+	constexpr size_t N = TestFixture::N;
+	constexpr size_t N_o = N / 2;
+	constexpr size_t N_e = N - N_o;
+
+	std::array<T, N> arr_in;
+	std::array<T, N_e> arr_e;
+	std::array<T, N_o> arr_o;
+	std::array<T, N> arr_out;
+
+	fill_sin(arr_in, -11, 13);
+	arr_out = arr_in;
+
+	deinterleave(arr_in, arr_e, arr_o);
+
+	LiftingTransform<WVLT, BC>::forward_adjoint(arr_e, arr_o);
+
+	LiftingTransform<WVLT, BC>::forward_adjoint(arr_out);
+
+	interleave(arr_e, arr_o, arr_in);
+
+	for (size_t i = 0; i < arr_out.size(); ++i)
+		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
+}
+
+TYPED_TEST_P(TestTrasformAndAdjoint, ValidateInverseAdjointStrided) {
+	// Test that the strided versions work as well
+
+	using WVLT = typename TestFixture::WVLT;
+	using T = typename WVLT::type;
+	using BC = typename TestFixture::BC;
+
+	T rtol = 1E-7;
+	T atol = 0;
+
+	constexpr size_t N = TestFixture::N;
+	constexpr size_t N_o = N / 2;
+	constexpr size_t N_e = N - N_o;
+
+	std::array<T, N> arr_in;
+	std::array<T, N_e> arr_e;
+	std::array<T, N_o> arr_o;
+	std::array<T, N> arr_out;
+
+	fill_sin(arr_in, -11, 13);
+	arr_out = arr_in;
+
+	deinterleave(arr_in, arr_e, arr_o);
+
+	LiftingTransform<WVLT, BC>::inverse_adjoint(arr_e, arr_o);
+
+	LiftingTransform<WVLT, BC>::inverse_adjoint(arr_out);
+
+	interleave(arr_e, arr_o, arr_in);
+
+	for (size_t i = 0; i < arr_out.size(); ++i)
+		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
+}
+
 TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForwardAdjoint) {
+	// Test that forward and forward_adjoint are actually adjoints of each other.
 
 	using WVLT = typename TestFixture::WVLT;
 	using T = typename WVLT::type;
@@ -154,6 +297,7 @@ TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForwardAdjoint) {
 }
 
 TYPED_TEST_P(TestTrasformAndAdjoint, ValidateInverseAdjoint) {
+	// Test that inverse and inverse_adjoint are actually adjoints of each other.
 
 	using WVLT = typename TestFixture::WVLT;
 	using T = typename WVLT::type;
@@ -194,6 +338,7 @@ TYPED_TEST_P(TestTrasformAndAdjoint, ValidateInverseAdjoint) {
 }
 
 TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForInvAdjDot) {
+	// Test that forward and inverse_adjoint work to compute dot products in transformed domain.
 
 	using WVLT = typename TestFixture::WVLT;
 	using T = typename WVLT::type;
@@ -232,6 +377,7 @@ TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForInvAdjDot) {
 }
 
 TYPED_TEST_P(TestTrasformAndAdjoint, ValidateInvForAdjDot) {
+	// Test that inverse and forward_adjoint work to compute dot products in sampled domain.
 
 	using WVLT = typename TestFixture::WVLT;
 	using T = typename WVLT::type;
@@ -275,7 +421,11 @@ REGISTER_TYPED_TEST_SUITE_P(TestTrasformAndAdjoint,
 	ValidateForwardAdjoint,
 	ValidateInverseAdjoint,
 	ValidateForInvAdjDot,
-	ValidateInvForAdjDot
+	ValidateInvForAdjDot,
+	ValidateForwardStrided,
+	ValidateInverseStrided,
+	ValidateForwardAdjointStrided,
+	ValidateInverseAdjointStrided
 );
 
 INSTANTIATE_TYPED_TEST_SUITE_P(PocketWavelets, TestTrasformAndAdjoint, TupleToTypes<WaveletTestMatrix>::type);

@@ -14,29 +14,49 @@
 #include <string>
 #include <iostream>
 #include <initializer_list>
+#include <cstdlib>
+
+#ifndef WAVELETS_NO_MULTITHREADING
+#include <mutex>
+#include <condition_variable>
+#include <thread>
+#include <queue>
+#include <atomic>
+#include <functional>
+#include <new>
+
+#ifdef WAVELETS_PTHREADS
+#  include <pthread.h>
+#endif
+#endif
 
 namespace ndarray {
 
 namespace detail {
-
-using std::size_t;
-using std::ptrdiff_t;
 using std::cout;
 using std::endl;
 
-using shape_t = std::vector<size_t>;
-using stride_t = std::vector<ptrdiff_t>;
+using std::size_t;
+using std::ptrdiff_t;
+
+using size_v = std::vector<size_t>;
+using stride_v = std::vector<ptrdiff_t>;
 
 #ifdef _MSC_VER
 
 inline void* aligned_alloc(size_t align, size_t size) {
-	void* ptr = _aligned_malloc(size, align);
+    size_t sz = size + size % align;
+    //void* ptr = _aligned_malloc(sz, align);
+    void* ptr = malloc(size);
 	if (!ptr) throw std::bad_alloc();
 	return ptr;
 }
 
 inline void aligned_dealloc(void* ptr) {
-	if (ptr) _aligned_free(ptr);
+    cout << "msvc aligned dealloc "<< ptr << endl;
+	//if (ptr) _aligned_free(ptr);
+    if (ptr) free(ptr);
+    cout << "Done" << endl;
 }
 #else
 inline void* aligned_alloc(size_t align, size_t size)
@@ -79,43 +99,62 @@ protected:
 	}
 	static void dealloc(T* ptr)
 	{
+
+        cout << "aligned dealloc?";
 		aligned_dealloc(ptr);
+
+        cout << " done" << endl;
 	}
 
 public:
 	using value_type = T;
     constexpr static size_t alignment = std::max(ALIGN, alignof(T));
 
-	aligned_array() : p(0), sz(0) {}
-	aligned_array(size_t n) : p(ralloc(n)), sz(n) {}
+    aligned_array() : p(0), sz(0) { cout << "Default Allocator" << endl; }
+    aligned_array(size_t n) : p(ralloc(n)), sz(n) { cout << "Allocating with " << n << endl; }
 	aligned_array(aligned_array&& other)
 		: p(other.p), sz(other.sz)
 	{
+        cout << "Move constructor?" << endl;
 		other.p = nullptr; other.sz = 0;
 	}
-	~aligned_array() { dealloc(p); }
+	~aligned_array() { 
+        cout << "Deallocating me..." << endl;
+        dealloc(p);
+        cout << "Done" << endl;
+    }
 
 	void resize(size_t n)
 	{
+        cout << "Resizing?" << endl;
 		if (n == sz) return;
+        T* temp = ralloc(n);
 		dealloc(p);
-		p = ralloc(n);
+		p = temp;
 		sz = n;
 	}
 
-    aligned_array& operator=(aligned_array& other)
+    // copy assignment
+    aligned_array& operator=(const aligned_array& other)
     {
+        cout << "l value assign" << endl;
+        if (this == &other)
+            return *this;
+
         resize(other.sz);
-        std::memcpy(p, other.p, other.sz * sizeof(T));
+        std::copy_n(other.p, other.sz, p);
         return *this;
     }
 
     aligned_array& operator=(aligned_array&& other)
     {
+
+        cout << "r value assign" << endl;
+        if (this == &other)
+            return *this;
         dealloc(p);
-        p = other.p;
-        sz = other.sz;
-        other.p = nullptr; other.sz = 0;
+        p = std::exchange(other.p, nullptr);
+        sz = std::exchange(other.sz, 0);
         return *this;
     }
 
@@ -149,54 +188,384 @@ public:
 	}
 };
 
+namespace threading {
+
+#ifdef WAVELETS_NO_MULTITHREADING
+
+    constexpr inline size_t thread_id() { return 0; }
+    constexpr inline size_t num_threads() { return 1; }
+
+    template <typename Func>
+    void thread_map(size_t /* nthreads */, Func f)
+    {
+        f();
+    }
+
+    static size_t thread_count(size_t /*nthreads*/, const size_v&/*shape*/,
+        size_t /*axis*/, size_t /*vlen*/)
+    { return 1; }
+
+#else
+
+    static size_t thread_count(size_t nthreads, const size_v& shape,
+        size_t axis, size_t vlen)
+    {
+        if (nthreads == 1) return 1;
+        size_t size = prod(shape);
+        size_t parallel = size / (shape[axis] * vlen);
+        if (shape[axis] < 1000)
+            parallel /= 4;
+        size_t max_threads = nthreads == 0 ?
+            std::thread::hardware_concurrency() : nthreads;
+        return std::max(size_t(1), std::min(parallel, max_threads));
+}
+
+    inline size_t& thread_id()
+    {
+        static thread_local size_t thread_id_ = 0;
+        return thread_id_;
+    }
+    inline size_t& num_threads()
+    {
+        static thread_local size_t num_threads_ = 1;
+        return num_threads_;
+    }
+    static const size_t max_threads = std::max(1u, std::thread::hardware_concurrency());
+
+    class latch
+    {
+        std::atomic<size_t> num_left_;
+        std::mutex mut_;
+        std::condition_variable completed_;
+        using lock_t = std::unique_lock<std::mutex>;
+
+    public:
+        latch(size_t n) : num_left_(n) {}
+
+        void count_down()
+        {
+            lock_t lock(mut_);
+            if (--num_left_)
+                return;
+            completed_.notify_all();
+        }
+
+        void wait()
+        {
+            lock_t lock(mut_);
+            completed_.wait(lock, [this] { return is_ready(); });
+        }
+        bool is_ready() { return num_left_ == 0; }
+    };
+
+    template <typename T> class concurrent_queue
+    {
+        std::queue<T> q_;
+        std::mutex mut_;
+        std::atomic<size_t> size_;
+        using lock_t = std::lock_guard<std::mutex>;
+
+    public:
+
+        void push(T val)
+        {
+            lock_t lock(mut_);
+            ++size_;
+            q_.push(std::move(val));
+        }
+
+        bool try_pop(T& val)
+        {
+            if (size_ == 0) return false;
+            lock_t lock(mut_);
+            // Queue might have been emptied while we acquired the lock
+            if (q_.empty()) return false;
+
+            val = std::move(q_.front());
+            --size_;
+            q_.pop();
+            return true;
+        }
+
+        bool empty() const { return size_ == 0; }
+    };
+
+    // C++ allocator with support for over-aligned types
+    template <typename T> struct aligned_allocator
+    {
+        using value_type = T;
+        template <class U>
+        aligned_allocator(const aligned_allocator<U>&) {}
+        aligned_allocator() = default;
+
+        T* allocate(size_t n)
+        {
+            void* mem = aligned_alloc(alignof(T), n * sizeof(T));
+            return static_cast<T*>(mem);
+        }
+
+        void deallocate(T* p, size_t /*n*/)
+        {
+            aligned_dealloc(p);
+        }
+    };
+
+    class thread_pool
+    {
+        // A reasonable guess, probably close enough for most hardware
+        static constexpr size_t cache_line_size = 64;
+        struct alignas(cache_line_size) worker
+        {
+            std::thread thread;
+            std::condition_variable work_ready;
+            std::mutex mut;
+            std::atomic_flag busy_flag = ATOMIC_FLAG_INIT;
+            std::function<void()> work;
+
+            void worker_main(
+                std::atomic<bool>& shutdown_flag,
+                std::atomic<size_t>& unscheduled_tasks,
+                concurrent_queue<std::function<void()>>& overflow_work)
+            {
+                using lock_t = std::unique_lock<std::mutex>;
+                bool expect_work = true;
+                while (!shutdown_flag || expect_work)
+                {
+                    std::function<void()> local_work;
+                    if (expect_work || unscheduled_tasks == 0)
+                    {
+                        lock_t lock(mut);
+                        // Wait until there is work to be executed
+                        work_ready.wait(lock, [&] { return (work || shutdown_flag); });
+                        local_work.swap(work);
+                        expect_work = false;
+                    }
+
+                    bool marked_busy = false;
+                    if (local_work)
+                    {
+                        marked_busy = true;
+                        local_work();
+                    }
+
+                    if (!overflow_work.empty())
+                    {
+                        if (!marked_busy && busy_flag.test_and_set())
+                        {
+                            expect_work = true;
+                            continue;
+                        }
+                        marked_busy = true;
+
+                        while (overflow_work.try_pop(local_work))
+                        {
+                            --unscheduled_tasks;
+                            local_work();
+                        }
+                    }
+
+                    if (marked_busy) busy_flag.clear();
+                }
+            }
+        };
+
+        concurrent_queue<std::function<void()>> overflow_work_;
+        std::mutex mut_;
+        std::vector<worker, aligned_allocator<worker>> workers_;
+        std::atomic<bool> shutdown_;
+        std::atomic<size_t> unscheduled_tasks_;
+        using lock_t = std::lock_guard<std::mutex>;
+
+        void create_threads()
+        {
+            lock_t lock(mut_);
+            size_t nthreads = workers_.size();
+            for (size_t i = 0; i < nthreads; ++i)
+            {
+                try
+                {
+                    auto* worker = &workers_[i];
+                    worker->busy_flag.clear();
+                    worker->work = nullptr;
+                    worker->thread = std::thread([worker, this]
+                        {
+                            worker->worker_main(shutdown_, unscheduled_tasks_, overflow_work_);
+                        });
+                }
+                catch (...)
+                {
+                    shutdown_locked();
+                    throw;
+                }
+            }
+        }
+
+        void shutdown_locked()
+        {
+            shutdown_ = true;
+            for (auto& worker : workers_)
+                worker.work_ready.notify_all();
+
+            for (auto& worker : workers_)
+                if (worker.thread.joinable())
+                    worker.thread.join();
+        }
+
+    public:
+        explicit thread_pool(size_t nthreads) :
+            workers_(nthreads)
+        {
+            create_threads();
+        }
+
+        thread_pool() : thread_pool(max_threads) {}
+
+        ~thread_pool() { shutdown(); }
+
+        void submit(std::function<void()> work)
+        {
+            lock_t lock(mut_);
+            if (shutdown_)
+                throw std::runtime_error("Work item submitted after shutdown");
+
+            ++unscheduled_tasks_;
+
+            // First check for any idle workers and wake those
+            for (auto& worker : workers_)
+                if (!worker.busy_flag.test_and_set())
+                {
+                    --unscheduled_tasks_;
+                    {
+                        lock_t lock(worker.mut);
+                        worker.work = std::move(work);
+                    }
+                    worker.work_ready.notify_one();
+                    return;
+                }
+
+            // If no workers were idle, push onto the overflow queue for later
+            overflow_work_.push(std::move(work));
+        }
+
+        void shutdown()
+        {
+            lock_t lock(mut_);
+            shutdown_locked();
+        }
+
+        void restart()
+        {
+            shutdown_ = false;
+            create_threads();
+        }
+    };
+
+    inline thread_pool& get_pool()
+    {
+        static thread_pool pool;
+#ifdef POCKETFFT_PTHREADS
+        static std::once_flag f;
+        std::call_once(f,
+            [] {
+                pthread_atfork(
+                    +[] { get_pool().shutdown(); },  // prepare
+                    +[] { get_pool().restart(); },   // parent
+                    +[] { get_pool().restart(); }    // child
+                );
+            });
+#endif
+
+        return pool;
+    }
+
+    /** Map a function f over nthreads */
+    template <typename Func>
+    void thread_map(size_t nthreads, Func f)
+    {
+        if (nthreads == 0)
+            nthreads = max_threads;
+
+        if (nthreads == 1)
+        {
+            f(); return;
+        }
+
+        auto& pool = get_pool();
+        latch counter(nthreads);
+        std::exception_ptr ex;
+        std::mutex ex_mut;
+        for (size_t i = 0; i < nthreads; ++i)
+        {
+            pool.submit(
+                [&f, &counter, &ex, &ex_mut, i, nthreads] {
+                    thread_id() = i;
+                    num_threads() = nthreads;
+                    try { f(); }
+                    catch (...)
+                    {
+                        std::lock_guard<std::mutex> lock(ex_mut);
+                        ex = std::current_exception();
+                    }
+                    counter.count_down();
+                });
+        }
+        counter.wait();
+        if (ex)
+            std::rethrow_exception(ex);
+    }
+
+#endif
+
+}
+
 class arr_info
 {
 protected:
-	shape_t shp;
-	stride_t str;
+	size_v shp;
+	stride_v str;
 
 public:
-	arr_info(const shape_t& shape_, const stride_t& stride_)
+	arr_info(const size_v& shape_, const stride_v& stride_)
 		: shp(shape_), str(stride_) {}
 	size_t ndim() const { return shp.size(); }
 	size_t size() const { return prod(shp); }
-	const shape_t& shape() const { return shp; }
+	const size_v& shape() const { return shp; }
 	size_t shape(size_t i) const { return shp[i]; }
-	const stride_t& stride() const { return str; }
+	const stride_v& stride() const { return str; }
 	const ptrdiff_t& stride(size_t i) const { return str[i]; }
 };
 
 template<typename T> class cndarr : public arr_info
 {
 protected:
-	const char* d;
+	const T* d;
 
 public:
-	cndarr(const void* data_, const shape_t& shape_, const stride_t& stride_)
+	cndarr(const T* data_, const size_v& shape_, const stride_v& stride_)
 		: arr_info(shape_, stride_),
-		d(reinterpret_cast<const char*>(data_)) {}
+		d(data_) {}
 	const T& operator[](ptrdiff_t ofs) const
 	{
-		return *reinterpret_cast<const T*>(d + ofs);
+		return d[ofs];
 	}
 };
 
 template<typename T> class ndarr : public cndarr<T>
 {
 public:
-	ndarr(void* data_, const shape_t& shape_, const stride_t& stride_)
-		: cndarr<T>::cndarr(const_cast<const void*>(data_), shape_, stride_)
+	ndarr(T* data_, const size_v& shape_, const stride_v& stride_)
+		: cndarr<T>::cndarr(const_cast<const T*>(data_), shape_, stride_)
 	{}
 	T& operator[](ptrdiff_t ofs)
 	{
-		return *reinterpret_cast<T*>(const_cast<char*>(cndarr<T>::d + ofs));
+		return *const_cast<T*>(cndarr<T>::d + ofs);
 	}
 };
 
 template<size_t N> class multi_iter
 {
 private:
-    shape_t pos;
+    size_v pos;
     const arr_info& iarr, & oarr;
     ptrdiff_t p_ii, p_i[N], str_i, p_oi, p_o[N], str_o;
     size_t idim, rem;
@@ -223,10 +592,10 @@ public:
         str_i(iarr.stride(idim_)), p_oi(0), str_o(oarr.stride(idim_)),
         idim(idim_), rem(iarr.size() / iarr.shape(idim))
     {
-        auto nshares = 1; //threading::num_threads();
+        auto nshares = threading::num_threads();
         if (nshares == 1) return;
         if (nshares == 0) throw std::runtime_error("can't run with zero threads");
-        auto myshare = 0; // threading::thread_id();
+        auto myshare = threading::thread_id();
         if (myshare >= nshares) throw std::runtime_error("impossible share requested");
         size_t nbase = rem / nshares;
         size_t additional = rem % nshares;
@@ -272,7 +641,7 @@ public:
 class simple_iter
 {
 private:
-    shape_t pos;
+    size_v pos;
     const arr_info& arr;
     ptrdiff_t p;
     size_t rem;
@@ -300,17 +669,17 @@ public:
 class rev_iter
 {
 private:
-    shape_t pos;
+    size_v pos;
     const arr_info& arr;
     std::vector<char> rev_axis;
     std::vector<char> rev_jump;
     size_t last_axis, last_size;
-    shape_t shp;
+    size_v shp;
     ptrdiff_t p, rp;
     size_t rem;
 
 public:
-    rev_iter(const arr_info& arr_, const shape_t& axes)
+    rev_iter(const arr_info& arr_, const size_v& axes)
         : pos(arr_.ndim(), 0), arr(arr_), rev_axis(arr_.ndim(), 0),
         rev_jump(arr_.ndim(), 1), p(0), rp(0)
     {
@@ -372,7 +741,7 @@ public:
 
     aligned_ndarray() : base(), shp(), str() {}
 
-    aligned_ndarray(const shape_t& shape) : 
+    aligned_ndarray(const size_v& shape) :
         shp(shape), str(prod(shape)), base(prod(shape))
     {
         set_strides();
@@ -386,18 +755,18 @@ public:
 
     aligned_ndarray(aligned_ndarray&& other) : base(other), shp(other.shp), str(other.str)
     {
-        other.shp = shape_t(); other.str = stride_t();
+        other.shp = size_v(); other.str = stride_v();
     }
 
     size_t ndim() const { return shp.size(); }
     size_t size() const { return prod(shp); }
-    const shape_t& shape() const { return shp; }
+    const size_v& shape() const { return shp; }
     size_t shape(size_t i) const { return shp[i]; }
-    const stride_t& stride() const { return str; }
+    const stride_v& stride() const { return str; }
     const ptrdiff_t& stride(size_t i) const { return str[i]; }
 
     cndarr<T> as_cndarray() {
-        auto str_bytes = stride_t(str);
+        auto str_bytes = stride_v(str);
         for (auto i = 0u; i < ndim(); ++i)
             str_bytes[i] *= sizeof(T);
         auto out = cndarr<T>(data(), shp, str_bytes);
@@ -405,7 +774,7 @@ public:
     }
 
     ndarr<T> as_ndarray() {
-        auto str_bytes = stride_t(str);
+        auto str_bytes = stride_v(str);
         for (auto i = 0u; i < ndim(); ++i)
             str_bytes[i] *= sizeof(T);
         auto out = ndarr<T>(data(), shp, str_bytes);
@@ -418,7 +787,7 @@ public:
     }
 
     template<typename... Is>
-    const T& operator() (Is... inds) const{
+    const T& operator() (Is... inds) const {
         return base::data()[get_flat_index(inds...)];
     }
 
@@ -427,7 +796,7 @@ public:
     {
         size_t n = prod(shape);
         shp = shape;
-        str = stride_t(shp.size());
+        str = stride_v(shp.size());
         base::resize(n);
         set_strides();
     }
@@ -447,15 +816,15 @@ public:
         shp = other.shp;
         str = other.str;
 
-        other.shp = shape_t();
-        other.str = stride_t();
+        other.shp = size_v();
+        other.str = stride_v();
         other.p = nullptr; other.sz = 0;
         return *this;
     }
 
-    friend std::ostream& operator<<(std::ostream & os, const aligned_ndarray& obj)
+    friend std::ostream& operator<<(std::ostream& os, const aligned_ndarray& obj)
     {
-        auto pos = shape_t(obj.ndim(), 0);
+        auto pos = size_v(obj.ndim(), 0);
         auto p = ptrdiff_t(0);
         auto rem = obj.size();
 
@@ -504,8 +873,8 @@ public:
     }
 
 private:
-    shape_t shp;
-    stride_t str;
+    size_v shp;
+    stride_v str;
 
     void set_strides() {
         str[ndim() - 1] = 1; // strides here are in data_type units.
@@ -516,7 +885,7 @@ private:
 
     template<typename... Is>
     size_t get_flat_index(Is... inds) const {
-        shape_t idx_arr = { static_cast<size_t>(inds)... };
+        size_v idx_arr = { static_cast<size_t>(inds)... };
         if (idx_arr.size() != ndim()) throw std::invalid_argument("Inconsistent number of passed indices");
         size_t flat_index = 0;
         for (size_t ax = 0; ax < ndim(); ++ax)
@@ -529,9 +898,13 @@ private:
 
 using detail::aligned_array;
 using detail::aligned_ndarray;
+using detail::cndarr;
 using detail::ndarr;
-using detail::shape_t;
-using detail::stride_t;
+using detail::multi_iter;
+using detail::size_v;
+using detail::stride_v;
+using detail::prod;
+
 }
 
 #endif
