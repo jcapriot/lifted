@@ -189,6 +189,7 @@ static void time_transform(size_t n, size_t n_repeats=1024) {
 	auto tick = high_resolution_clock::now();
 	auto tock = high_resolution_clock::now();
 	duration<double, std::micro> ms_double = tock - tick;
+	cout << ms_double << endl;
 
 	tick = high_resolution_clock::now();
 	for (size_t i = 0; i < n_repeats; ++i)
