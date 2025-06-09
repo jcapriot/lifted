@@ -7,7 +7,6 @@
 #include <string>
 #include <numeric>
 #include <cstring>
-#include <immintrin.h>
 #include <cstdlib>
 
 using std::vector;
