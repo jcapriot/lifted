@@ -45,18 +45,13 @@ using stride_v = std::vector<ptrdiff_t>;
 #ifdef _MSC_VER
 
 inline void* aligned_alloc(size_t align, size_t size) {
-    size_t sz = size + size % align;
-    //void* ptr = _aligned_malloc(sz, align);
-    void* ptr = malloc(size);
+    void* ptr = _aligned_malloc(size, align);
 	if (!ptr) throw std::bad_alloc();
 	return ptr;
 }
 
 inline void aligned_dealloc(void* ptr) {
-    cout << "msvc aligned dealloc "<< ptr << endl;
-	//if (ptr) _aligned_free(ptr);
-    if (ptr) free(ptr);
-    cout << "Done" << endl;
+	if (ptr) _aligned_free(ptr);
 }
 #else
 inline void* aligned_alloc(size_t align, size_t size)
@@ -99,34 +94,20 @@ protected:
 	}
 	static void dealloc(T* ptr)
 	{
-
-        cout << "aligned dealloc?";
 		aligned_dealloc(ptr);
-
-        cout << " done" << endl;
 	}
 
 public:
 	using value_type = T;
     constexpr static size_t alignment = std::max(ALIGN, alignof(T));
 
-    aligned_array() : p(0), sz(0) { cout << "Default Allocator" << endl; }
-    aligned_array(size_t n) : p(ralloc(n)), sz(n) { cout << "Allocating with " << n << endl; }
-	aligned_array(aligned_array&& other)
-		: p(other.p), sz(other.sz)
-	{
-        cout << "Move constructor?" << endl;
-		other.p = nullptr; other.sz = 0;
-	}
-	~aligned_array() { 
-        cout << "Deallocating me..." << endl;
-        dealloc(p);
-        cout << "Done" << endl;
-    }
+    aligned_array() : p(0), sz(0) {}
+    aligned_array(size_t n) : p(ralloc(n)), sz(n) {}
+	aligned_array(aligned_array&& other) : p(other.p), sz(other.sz) {other.p = nullptr; other.sz = 0;}
+	~aligned_array() {dealloc(p);}
 
 	void resize(size_t n)
 	{
-        cout << "Resizing?" << endl;
 		if (n == sz) return;
         T* temp = ralloc(n);
 		dealloc(p);
@@ -137,7 +118,6 @@ public:
     // copy assignment
     aligned_array& operator=(const aligned_array& other)
     {
-        cout << "l value assign" << endl;
         if (this == &other)
             return *this;
 
@@ -148,8 +128,6 @@ public:
 
     aligned_array& operator=(aligned_array&& other)
     {
-
-        cout << "r value assign" << endl;
         if (this == &other)
             return *this;
         dealloc(p);
@@ -548,6 +526,17 @@ public:
 	{
 		return d[ofs];
 	}
+
+    cndarr get_subset(const size_v& start, const size_v& end) {
+        size_v new_shape = end;
+        const T* new_d = d;
+        for (size_t i = 0; i < start.size(); ++i)
+        {
+            new_d += start[i] * str[i];
+            new_shape[i] -= start[i];
+        }
+        return cndarr(new_d, new_shape, str);
+    }
 };
 
 template<typename T> class ndarr : public cndarr<T>
@@ -560,6 +549,16 @@ public:
 	{
 		return *const_cast<T*>(cndarr<T>::d + ofs);
 	}
+    ndarr get_subset(const size_v& start, const size_v& end) {
+        size_v new_shape = end;
+        T* new_d = cndarr<T>::d;
+        for (size_t i = 0; i < start.size(); ++i)
+        {
+            new_d += start[i] * cndarr<T>::str[i];
+            new_shape[i] -= start[i];
+        }
+        return ndarr(new_d, new_shape, cndarr<T>::str);
+    }
 };
 
 template<size_t N> class multi_iter

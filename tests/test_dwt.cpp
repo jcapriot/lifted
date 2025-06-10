@@ -16,7 +16,7 @@ using namespace test_helpers;
 class TestShapesAndAxes : public ::testing::TestWithParam<std::tuple<size_v, size_v>> {};
 
 
-TEST_P(TestShapesAndAxes, ValidateDWTDriver) {
+TEST_P(TestShapesAndAxes, ValidateDWTSingleLevel) {
 
     using prec = double;
     using WVLT = Daubechies2<prec>;
@@ -26,9 +26,8 @@ TEST_P(TestShapesAndAxes, ValidateDWTDriver) {
 
     size_t sz = prod(shape);
     size_t ndim = shape.size();
-
-    size_t n_last = shape[ndim - 1];
-    size_t n_other = sz / n_last;
+    
+    auto levels = size_v(shape.size(), 1);
 
     // initialize inputs and outputs
     std::vector<prec> input(sz);
@@ -41,11 +40,8 @@ TEST_P(TestShapesAndAxes, ValidateDWTDriver) {
         size_t ir = ndim - i;
         strides[ir] = shape[ir + 1] * strides[ir + 1];
     }
-
-    for (size_t i = 0; i < n_other; ++i) {
-        auto in_span = std::span(input.data() + i * n_last, n_last);
-        fill_sin(in_span, -10.0 * (i + 1), 10.0 * (i + 1));
-    }
+;
+    fill_sin(input, -1000.0, 1000.0);
 
     prec* ain = input.data();
     prec* aout = output_ref.data();
@@ -57,7 +53,7 @@ TEST_P(TestShapesAndAxes, ValidateDWTDriver) {
         auto in_slices = all_arrays_along_axis(ain, shape, strides, ax);
         auto out_slices = all_arrays_along_axis(aout, shape, strides, ax);
 
-        EXPECT_EQ(in_slices.size(), sz / len);
+        ASSERT_EQ(in_slices.size(), sz / len);
 
         std::vector<prec> s(ns);
         std::vector<prec> d(nd);
@@ -70,10 +66,147 @@ TEST_P(TestShapesAndAxes, ValidateDWTDriver) {
         ain = aout;
     }
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, input.data(), output.data(), 1);
+    dwt<WVLT, BC>(shape, strides, strides, axes, levels, input.data(), output.data());
 
     for (size_t i = 0; i < sz; ++i) {
-        EXPECT_NE(output[i], output_ref[i]);
+        EXPECT_EQ(output[i], output_ref[i]);
+    }
+}
+
+
+TEST_P(TestShapesAndAxes, ValidateDWTSeperableMultipleLevel) {
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    using trans = LiftingTransform<WVLT, BC>;
+    const auto& [shape, axes] = GetParam();
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    auto levels = size_v(shape.size(), 3);
+
+    // initialize inputs and outputs
+    std::vector<prec> input(sz);
+    std::vector<prec> output(sz);
+    std::vector<prec> output_ref(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+    ;
+    fill_sin(input, -1000.0, 1000.0);
+
+    prec* ain = input.data();
+    prec* aout = output_ref.data();
+    for (size_t iax = 0; iax < axes.size(); ++iax) {
+        size_t ax = axes[iax];
+        size_t len = shape[ax];
+        size_t nd = len / 2;
+        size_t ns = len - nd;
+
+        auto in_slices = test_helpers::all_arrays_along_axis(ain, shape, strides, ax);
+        auto out_slices = test_helpers::all_arrays_along_axis(aout, shape, strides, ax);
+
+        std::vector<prec> x(len);
+        std::vector<prec> s(ns);
+        std::vector<prec> d(nd);
+
+        for (size_t i = 0; i < in_slices.size(); ++i) {
+            // copy in
+            for (size_t j = 0; j < len; ++j) x[j] = in_slices[i][j];
+            nd = len / 2;
+            ns = len - nd;
+
+            for (size_t lvl = 0; lvl < levels[iax]; ++lvl) {
+                auto x_t = std::span(x.data(), ns + nd);
+                auto s_t = std::span(s.data(), ns);
+                auto d_t = std::span(d.data(), nd);
+
+                test_helpers::deinterleave(x_t, s_t, d_t);
+                trans::forward(s_t, d_t);
+                test_helpers::stack(s_t, d_t, x_t);
+
+                nd = ns / 2;
+                ns = ns - nd;
+            }
+
+            //copy out
+            for (size_t j = 0; j < len; ++j) out_slices[i][j] = x[j];
+        }
+        ain = aout;
+    }
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, levels, input.data(), output.data());
+
+    for (size_t i = 0; i < sz; ++i) {
+        EXPECT_EQ(output[i], output_ref[i]);
+    }
+}
+
+
+TEST_P(TestShapesAndAxes, ValidateDWTMultipleLevel) {
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    using trans = LiftingTransform<WVLT, BC>;
+    const auto& [shape, axes] = GetParam();
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    size_t level = 3;
+
+    // initialize inputs and outputs
+    std::vector<prec> input(sz);
+    std::vector<prec> output(sz);
+    std::vector<prec> output_ref(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+    ;
+    fill_sin(input, -1000.0, 1000.0);
+
+    auto shape_ = size_v(shape);
+    prec* ain = input.data();
+    prec* aout = output_ref.data();
+    for (size_t lvl = 0; lvl < level; ++lvl) {
+
+        for (auto ax : axes) {
+            size_t len = shape_[ax];
+            size_t nd = len / 2;
+            size_t ns = len - nd;
+
+            auto in_slices = test_helpers::all_arrays_along_axis(ain, shape_, strides, ax);
+            auto out_slices = test_helpers::all_arrays_along_axis(aout, shape_, strides, ax);
+
+            std::vector<prec> s(ns);
+            std::vector<prec> d(nd);
+
+            for (size_t i = 0; i < in_slices.size(); ++i) {
+                test_helpers::deinterleave(in_slices[i], s, d);
+                trans::forward(s, d);
+                test_helpers::stack(s, d, out_slices[i]);
+            }
+            ain = aout;
+        }
+
+        for (auto ax : axes) shape_[ax] = shape_[ax] - shape_[ax] / 2;
+    }
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, level, input.data(), output.data());
+
+    for (size_t i = 0; i < sz; ++i) {
+        EXPECT_EQ(output[i], output_ref[i]);
     }
 }
 
@@ -82,7 +215,20 @@ INSTANTIATE_TEST_SUITE_P(
     DWTDriverTests,  // Instance name
     TestShapesAndAxes,
     ::testing::Values(
-        std::make_tuple(size_v{31}, size_v{1}),
-        std::make_tuple(size_v{32}, size_v{1}),
+        std::make_tuple(size_v{ 31 }, size_v{ 0 }),
+        std::make_tuple(size_v{ 32 }, size_v{ 0 }),
+        std::make_tuple(size_v{ 32, 1 }, size_v{ 0 }),
+        std::make_tuple(size_v{ 1, 32}, size_v{ 1 }),
+        std::make_tuple(size_v{ 14, 31 }, size_v{ 1 }),
+        std::make_tuple(size_v{ 23, 41 }, size_v{ 0 }),
+        std::make_tuple(size_v{ 14, 31 }, size_v{ 1 , 0}),
+        std::make_tuple(size_v{ 23, 41 }, size_v{ 0 , 1}),
+        std::make_tuple(size_v{ 15, 14, 31 }, size_v{ 2 , }),
+        std::make_tuple(size_v{ 14, 23, 41 }, size_v{ 1 }),
+        std::make_tuple(size_v{ 14, 23, 41 }, size_v{ 0 }),
+        std::make_tuple(size_v{ 15, 14, 31 }, size_v{ 2 , 1}),
+        std::make_tuple(size_v{ 14, 23, 41 }, size_v{ 1 , 0}),
+        std::make_tuple(size_v{ 14, 23, 41 }, size_v{ 0 , 2}),
+        std::make_tuple(size_v{ 15, 14, 31 }, size_v{ 2 , 1, 0})
     )
 );

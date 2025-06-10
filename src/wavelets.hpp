@@ -629,7 +629,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 2;
+			const static size_t width = 2;
 		};
 
 		template<typename T> class Daubechies2 {
@@ -648,7 +648,7 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			const size_t width = 4;
+			const static size_t width = 4;
 		};
 
 		template<typename T> class Daubechies3 {
@@ -675,7 +675,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 6;
+			const static size_t width = 6;
 
 			using type = T;
 		};
@@ -708,7 +708,7 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			const size_t width = 8;
+			const static size_t width = 8;
 		};
 
 		template<typename T> class Daubechies5 {
@@ -740,7 +740,7 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			const size_t width = 10;
+			const static size_t width = 10;
 		};
 
 		template<typename T> class Daubechies6 {
@@ -783,7 +783,7 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			const size_t width = 12;
+			const static size_t width = 12;
 		};
 
 		template<typename T> class Daubechies7 {
@@ -828,7 +828,7 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			const size_t width = 14;
+			const static size_t width = 14;
 		};
 
 		template<typename T> class Daubechies8 {
@@ -877,7 +877,7 @@ namespace wavelets {
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
 
 			using type = T;
-			const size_t width = 16;
+			const static size_t width = 16;
 		};
 
 		template<typename T> class BiorSpline3_1 {
@@ -896,7 +896,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 4;
+			const static size_t width = 4;
 		};
 
 		template<typename T> class ReverseBiorSpline3_1 {
@@ -915,7 +915,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 4;
+			const static size_t width = 4;
 		};
 
 		template<typename T> class BiorSpline4_2 {
@@ -932,7 +932,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 7;
+			const static size_t width = 7;
 		};
 
 		template<typename T> class ReverseBiorSpline4_2 {
@@ -949,7 +949,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 7;
+			const static size_t width = 7;
 		};
 
 		template<typename T> class BiorSpline2_4 {
@@ -966,7 +966,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 9;
+			const static size_t width = 9;
 		};
 
 		template<typename T> class ReverseBiorSpline2_4 {
@@ -983,7 +983,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 9;
+			const static size_t width = 9;
 		};
 
 		template<typename T> class BiorSpline6_2 {
@@ -1003,7 +1003,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 9;
+			const static size_t width = 9;
 		};
 
 		template<typename T> class ReverseBiorSpline6_2 {
@@ -1023,7 +1023,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 9;
+			const static size_t width = 9;
 		};
 
 		template<typename T> class CDF5_3 {
@@ -1039,7 +1039,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 5;
+			const static size_t width = 5;
 		};
 
 		template<typename T> class ReverseCDF5_3 {
@@ -1055,7 +1055,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 5;
+			const static size_t width = 5;
 		};
 
 		template<typename T> class CDF9_7{
@@ -1075,7 +1075,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 9;
+			const static size_t width = 9;
 		};
 
 		template<typename T> class ReverseCDF9_7 {
@@ -1095,7 +1095,7 @@ namespace wavelets {
 				scale<sc>
 			>;
 			constexpr static size_t n_steps = std::tuple_size<steps>::value;
-			const size_t width = 9;
+			const static size_t width = 9;
 		};
 
 		template<typename WVLT, typename BC=ZeroBoundary>
@@ -1236,22 +1236,23 @@ namespace wavelets {
 		};
 
 		template<typename T> aligned_array<T> alloc_tmp(const size_v& shape,
-			const size_t axsize)
+			const size_t axsize, const size_t n_levels)
 		{
 			auto othersize = prod(shape) / axsize;
-			auto tmpsize = axsize * ((othersize >= VLEN<T>::val) ? VLEN<T>::val : 1);
+			auto sz = axsize;
+			// for each lvl of the transform, need to add an extra element if the resulting ns shape is odd
+			// so there is working space for the diver to deinterleave s onto d at each level.
+			int ns = axsize;
+			for (size_t lvl = 0; lvl < n_levels; ++lvl) {
+				if (ns % 2 == 1) sz += 1;
+				ns = ns - ns / 2;
+			}
+			auto tmpsize = sz * ((othersize >= VLEN<T>::val) ? VLEN<T>::val : 1);
 			return aligned_array<T>(tmpsize);
 		}
 
-		template<size_t vlen>
-		static inline size_t tmp_size(const size_v& shape, const size_t axsize) {
-			auto othersize = prod(shape) / axsize;
-			auto tmpsize = axsize * ((othersize >= vlen) ? vlen : 1);
-			return tmpsize;
-		}
-
 		template<typename T> aligned_array<T> alloc_tmp(const size_v& shape,
-			const size_v& axes)
+			const size_v& axes, const size_t n_levels)
 		{
 			size_t fullsize = prod(shape);
 			size_t tmpsize = 0;
@@ -1259,55 +1260,50 @@ namespace wavelets {
 			{
 				auto axsize = shape[axes[i]];
 				auto othersize = fullsize / axsize;
+				int ns = axsize;
+				for (size_t lvl = 0; lvl < n_levels; ++lvl) {
+					if (ns % 2 == 1) axsize += 1;
+					ns = ns - ns / 2;
+				}
 				auto sz = axsize * ((othersize >= VLEN<T>::val) ? VLEN<T>::val : 1);
 				if (sz > tmpsize) tmpsize = sz;
 			}
 			return aligned_array<T>(tmpsize);
 		}
 
-		template<size_t vlen>
-		static inline size_t tmp_size(const size_v& shape, const size_v& axes) {
-			size_t fullsize = prod(shape);
-			size_t tmpsize = 0;
-			for (size_t i = 0; i < axes.size(); ++i)
-			{
-				auto axsize = shape[axes[i]];
-				auto othersize = fullsize / axsize;
-				auto sz = axsize * ((othersize >= vlen) ? vlen : 1);
-				if (sz > tmpsize) tmpsize = sz;
-			}
-			return tmpsize;
-		}
-
 		// copy in operations (copy, copy & interleave, copy & deinterleave)
-		template <typename T, size_t vlen> void vec_copy_input(const multi_iter<vlen>& it,
-			const cndarr<T>& src, T* WAVELETS_RESTRICT dst)
-		{
-			cout << "vec copy in" << endl;
-			for (size_t i = 0; i < it.length_in(); ++i)
-				for (size_t j = 0; j < vlen; ++j) {
 
-					size_t ii = it.iofs(j, i);
-					size_t io = i * vlen + j;
-
-					cout << "i:" << i << " j:" << j << " ii:" << ii << " io:" << io << endl;
-
-					dst[io] = src[ii];
-				}
+		template <typename T, size_t vlen> inline void vec_copy_input(const multi_iter<vlen>& it,
+			const cndarr<T>& src, T* WAVELETS_RESTRICT dst, const size_t from, const size_t to)
+		{	
+			for (size_t i = from, ii = 0; i < to; ++i, ++ii)
+				for (size_t j = 0; j < vlen; ++j)
+					dst[ii * vlen + j] = src[it.iofs(j, i)];
 		}
 
-		template <typename T, size_t vlen> void copy_input(const multi_iter<vlen>& it,
+		template <typename T, size_t vlen> inline void vec_copy_input(const multi_iter<vlen>& it,
 			const cndarr<T>& src, T* WAVELETS_RESTRICT dst)
 		{
-			if (dst == &src[it.iofs(0)]) return;  // in-place
-			for (size_t i = 0; i < it.length_in(); ++i)
-				dst[i] = src[it.iofs(i)];
+			vec_copy_input(it, src, dst, 0, it.length_in());
 		}
 
-		template <typename T, size_t vlen> void vec_interleave_input(const multi_iter<vlen>& it,
+		template <typename T, size_t vlen> inline void copy_input(const multi_iter<vlen>& it,
+			const cndarr<T>& src, T* WAVELETS_RESTRICT dst, const size_t from, const size_t to)
+		{
+			if (dst == &src[it.iofs(from)]) return;  // in-place
+			for (size_t i = from, ii = 0; i < to; ++i, ++ii)
+				dst[ii] = src[it.iofs(i)];
+		}
+
+		template <typename T, size_t vlen> inline void copy_input(const multi_iter<vlen>& it,
 			const cndarr<T>& src, T* WAVELETS_RESTRICT dst)
 		{
-			size_t len = it.length_in();
+			copy_input(it, src, dst, 0, it.length_in());
+		}
+
+		template <typename T, size_t vlen> inline void vec_interleave_input(const multi_iter<vlen>& it,
+			const cndarr<T>& src, T* WAVELETS_RESTRICT dst, const size_t len)
+		{
 			size_t nd = len / 2;
 			size_t ns = len - nd;
 
@@ -1323,27 +1319,37 @@ namespace wavelets {
 					dst[ii * vlen + j] = src[it.iofs(j, i)];
 		}
 
-		template <typename T, size_t vlen> void interleave_input(const multi_iter<vlen>& it,
+		template <typename T, size_t vlen> inline void vec_interleave_input(const multi_iter<vlen>& it,
 			const cndarr<T>& src, T* WAVELETS_RESTRICT dst)
 		{
-			size_t len = it.length_in();
+			vec_interleave_input(it, src, dst, it.length_in());
+		}
+
+		template <typename T, size_t vlen> inline void interleave_input(const multi_iter<vlen>& it,
+			const cndarr<T>& src, T* WAVELETS_RESTRICT dst, const size_t len)
+		{
 			size_t nd = len / 2;
 			size_t ns = len - nd;
 
 			size_t i = 0;
 			size_t ii = 0;
-			for (; i < nd; ++i, ii+=2) {
+			for (; i < nd; ++i, ii += 2) {
 				dst[ii] = src[it.iofs(i)];
 				dst[ii + 1] = src[it.iofs(i + ns)];
 			}
-			for(; i < ns; ++i, ii += 2)
+			for (; i < ns; ++i, ii += 2)
 				dst[ii] = src[it.iofs(i)];
 		}
 
-		template <typename T, size_t vlen> void vec_deinterleave_input(const multi_iter<vlen>& it,
+		template <typename T, size_t vlen> inline void interleave_input(const multi_iter<vlen>& it,
 			const cndarr<T>& src, T* WAVELETS_RESTRICT dst)
 		{
-			size_t len = it.length_in();
+			interleave_input(it, src, dst, it.length_in());
+		}
+
+		template <typename T, size_t vlen> inline void vec_deinterleave_input(const multi_iter<vlen>& it,
+			const cndarr<T>& src, T* WAVELETS_RESTRICT dst, const size_t len)
+		{
 			size_t nd = len / 2;
 			size_t ns = len - nd;
 
@@ -1351,10 +1357,6 @@ namespace wavelets {
 			size_t ii = 0;
 			for (; i < nd; ++i, ii += 2)
 				for (size_t j = 0; j < vlen; ++j) {
-					auto i1 = it.iofs(j, ii);
-					auto i2 = it.iofs(j, ii + 1);
-
-					cout << "i:" << i << " ii:" << ii << " j:" << j << " i1:" << i1 << " i2:" << i2 << endl;
 					dst[i * vlen + j] = src[it.iofs(j, ii)];
 					dst[(i + ns) * vlen + j] = src[it.iofs(j, ii + 1)];
 				}
@@ -1363,21 +1365,21 @@ namespace wavelets {
 					dst[i * vlen + j] = src[it.iofs(j, ii)];
 		}
 
-		template <typename T, size_t vlen> void deinterleave_input(const multi_iter<vlen>& it,
+		template <typename T, size_t vlen> inline void vec_deinterleave_input(const multi_iter<vlen>& it,
 			const cndarr<T>& src, T* WAVELETS_RESTRICT dst)
 		{
-			size_t len = it.length_in();
+			vec_deinterleave_input(it, src, dst, it.length_in());
+		}
+
+		template <typename T, size_t vlen> inline void deinterleave_input(const multi_iter<vlen>& it,
+			const cndarr<T>& src, T* WAVELETS_RESTRICT dst, const size_t len)
+		{
 			size_t nd = len / 2;
 			size_t ns = len - nd;
 
 			size_t i = 0;
 			size_t ii = 0;
 			for (size_t i = 0, ii=0; i < nd; ++i, ii+=2) {
-				auto i1 = it.iofs(ii);
-				auto i2 = it.iofs(ii + 1);
-
-				cout << "i:" << i << " ii:" << ii << " i1:" << i1 << " i2:" << i2 << endl;
-
 				dst[i] = src[it.iofs(ii)];
 				dst[i + ns] = src[it.iofs(ii + 1)];
 			}
@@ -1385,32 +1387,45 @@ namespace wavelets {
 				dst[i] = src[it.iofs(ii)];
 		}
 
+		template <typename T, size_t vlen> inline void deinterleave_input(const multi_iter<vlen>& it,
+			const cndarr<T>& src, T* WAVELETS_RESTRICT dst)
+		{
+			deinterleave_input(it, src, dst, it.length_in());
+		}
+
 		// copy out operations (copy, copy & interleave, copy & deinterleave)
-		template<typename T, size_t vlen> void vec_copy_output(const multi_iter<vlen>& it,
-			const T* WAVELETS_RESTRICT src, ndarr<T>& dst)
+
+		template<typename T, size_t vlen> inline void vec_copy_output(const multi_iter<vlen>& it,
+			const T* WAVELETS_RESTRICT src, ndarr<T>& dst, const size_t from, const size_t to)
 		{
-			cout << "vec copy out" << endl;
-			for (size_t i = 0; i < it.length_out(); ++i)
-				for (size_t j = 0; j < vlen; ++j) {
-					size_t io = it.oofs(j, i);
-					size_t ii = i * vlen + j;
-					cout << "i:" << i << " j:" << j << " ii:" << ii << " io:" << io << endl;
-					dst[io] = src[ii];
-				}
+			for (size_t i = from, ii = 0; i < to; ++i, ++ii)
+				for (size_t j = 0; j < vlen; ++j)
+					dst[it.oofs(j, i)] = src[ii * vlen + j];
 		}
 
-		template<typename T, size_t vlen> void copy_output(const multi_iter<vlen>& it,
+		template<typename T, size_t vlen> inline void vec_copy_output(const multi_iter<vlen>& it,
 			const T* WAVELETS_RESTRICT src, ndarr<T>& dst)
 		{
-			if (src == &dst[it.oofs(0)]) return;  // in-place
-			for (size_t i = 0; i < it.length_out(); ++i)
-				dst[it.oofs(i)] = src[i];
+			vec_copy_output(it, src, dst, 0, it.length_out());
 		}
 
-		template<typename T, size_t vlen> void vec_interleave_output(const multi_iter<vlen>& it,
+		template<typename T, size_t vlen> inline void copy_output(const multi_iter<vlen>& it,
+			const T* WAVELETS_RESTRICT src, ndarr<T>& dst, const size_t from, const size_t to)
+		{
+			if (src == &dst[it.oofs(from)]) return;  // in-place
+			for (size_t i = from, ii = 0; i < to; ++i, ++ii)
+				dst[it.oofs(i)] = src[ii];
+		}
+
+		template<typename T, size_t vlen> inline void copy_output(const multi_iter<vlen>& it,
 			const T* WAVELETS_RESTRICT src, ndarr<T>& dst)
 		{
-			size_t len = it.length_out();
+			copy_output(it, src, dst, it.length_out());
+		}
+
+		template<typename T, size_t vlen> inline void vec_interleave_output(const multi_iter<vlen>& it,
+			const T* WAVELETS_RESTRICT src, ndarr<T>& dst, const size_t len)
+		{
 			size_t nd = len / 2;
 			size_t ns = len - nd;
 
@@ -1426,10 +1441,15 @@ namespace wavelets {
 					dst[it.oofs(j, ii)] = src[i * vlen + j];
 		}
 
-		template<typename T, size_t vlen> void interleave_output(const multi_iter<vlen>& it,
+		template<typename T, size_t vlen> inline void vec_interleave_output(const multi_iter<vlen>& it,
 			const T* WAVELETS_RESTRICT src, ndarr<T>& dst)
 		{
-			size_t len = it.length_out();
+			vec_interleave_output(it, src, dst, it.length_out());
+		}
+
+		template<typename T, size_t vlen> inline void interleave_output(const multi_iter<vlen>& it,
+			const T* WAVELETS_RESTRICT src, ndarr<T>& dst, const size_t len)
+		{
 			size_t nd = len / 2;
 			size_t ns = len - nd;
 
@@ -1443,10 +1463,15 @@ namespace wavelets {
 				dst[it.oofs(ii)] = src[i];
 		}
 
-		template<typename T, size_t vlen> void vec_deinterleave_output(const multi_iter<vlen>& it,
+		template<typename T, size_t vlen> inline void interleave_output(const multi_iter<vlen>& it,
 			const T* WAVELETS_RESTRICT src, ndarr<T>& dst)
 		{
-			size_t len = it.length_out();
+			interleave_output(it, src, dst, it.length_out());
+		}
+
+		template<typename T, size_t vlen> inline void vec_deinterleave_output(const multi_iter<vlen>& it,
+			const T* WAVELETS_RESTRICT src, ndarr<T>& dst, const size_t len)
+		{
 			size_t nd = len / 2;
 			size_t ns = len - nd;
 
@@ -1463,10 +1488,16 @@ namespace wavelets {
 
 		}
 
-		template<typename T, size_t vlen> void deinterleave_output(const multi_iter<vlen>& it,
+		template<typename T, size_t vlen> inline void vec_deinterleave_output(const multi_iter<vlen>& it,
 			const T* WAVELETS_RESTRICT src, ndarr<T>& dst)
 		{
-			size_t len = it.length_out();
+			vec_deinterleave_output(it, src, dst, it.length_out());
+
+		}
+
+		template<typename T, size_t vlen> inline void deinterleave_output(const multi_iter<vlen>& it,
+			const T* WAVELETS_RESTRICT src, ndarr<T>& dst, const size_t len)
+		{
 			size_t nd = len / 2;
 			size_t ns = len - nd;
 
@@ -1480,112 +1511,480 @@ namespace wavelets {
 				dst[it.oofs(i)] = src[ii];
 		}
 
+		template<typename T, size_t vlen> inline void deinterleave_output(const multi_iter<vlen>& it,
+			const T* WAVELETS_RESTRICT src, ndarr<T>& dst)
+		{
+			deinterleave_output(it, src, dst, it.length_out());
+		}
 
-		template<typename WVLT, typename BC, typename T>
-		static void dwt(
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes,
-			const T* data_in, T* data_out, size_t n_threads
-		) {
+		// buffer interleaves and de-interleaves
+		template <typename T, size_t vlen> inline void vec_deinterleave(
+			const T* WAVELETS_RESTRICT src, T* WAVELETS_RESTRICT dst, const size_t len)
+		{
+			size_t nd = len / 2;
+			size_t ns = len - nd;
 
-			cout << "dwt:" << endl;
+			size_t i = 0;
+			size_t ii = 0;
+			for (; i < nd; ++i, ii += 2)
+				for (size_t j = 0; j < vlen; ++j) {
+					dst[i * vlen + j] = src[ii * vlen + j];
+					dst[(i + ns) * vlen + j] = src[(ii + 1) * vlen + j];
+				}
+			for (; i < ns; ++i, ii += 2)
+				for (size_t j = 0; j < vlen; ++j)
+					dst[i * vlen + j] = src[ii * vlen + j];
+		}
 
+		template <typename T> inline void deinterleave(
+			const T* WAVELETS_RESTRICT src, T* WAVELETS_RESTRICT dst, const size_t len)
+		{
+			size_t nd = len / 2;
+			size_t ns = len - nd;
+
+			size_t i = 0;
+			size_t ii = 0;
+			for (size_t i = 0, ii = 0; i < nd; ++i, ii += 2) {
+				dst[i] = src[ii];
+				dst[i + ns] = src[ii + 1];
+			}
+			for (; i < ns; ++i, ii += 2)
+				dst[i] = src[ii];
+		}
+
+		template <typename T> inline void interleave(
+			const T* WAVELETS_RESTRICT src, T* WAVELETS_RESTRICT dst, const size_t len)
+		{
+			size_t nd = len / 2;
+			size_t ns = len - nd;
+
+			size_t i = 0;
+			size_t ii = 0;
+			for (; i < nd; ++i, ii += 2) {
+				dst[ii] = src[i];
+				dst[ii + 1] = src[i + ns];
+			}
+			for (; i < ns; ++i, ii += 2)
+				dst[ii] = src[i];
+		}
+
+		template<typename T, size_t vlen> inline void vec_interleave(
+			const T* WAVELETS_RESTRICT src, T* WAVELETS_RESTRICT dst, const size_t len)
+		{
+			size_t nd = len / 2;
+			size_t ns = len - nd;
+
+			size_t i = 0;
+			size_t ii = 0;
+			for (; i < nd; ++i, ii += 2)
+				for (size_t j = 0; j < vlen; ++j) {
+					dst[ii * vlen + j] = src[i * vlen + j];
+					dst[(ii + 1) * vlen + j] = src[(i + ns) * vlen + j];
+				}
+			for (; i < ns; ++i, ii += 2)
+				for (size_t j = 0; j < vlen; ++j)
+					dst[ii * vlen + j] = src[i * vlen + j];
+
+		}
+
+
+		template<typename WVLT, typename BC>
+		struct forward_driver {
+			using wavelet = WVLT;
 			using trans = LiftingTransform<WVLT, BC>;
+
+			template<typename T, size_t vlen>
+			static inline void apply(const multi_iter<vlen>& it, const cndarr<T>& ain, ndarr<T>& aout, T* WAVELETS_RESTRICT buf, const size_t n, const size_t level) {
+				if (level == 0) return;
+				
+				size_t nd = n / 2;
+				size_t ns = n - nd;
+
+				// perform first level transform
+
+				// deinterleave input into buffer
+				deinterleave_input(it, ain, buf, n);
+
+				// get pointers to s and d
+				T* s = buf;
+				T* d = buf + ns;
+				// perform transform inplace on s and d (which have unit stride)
+				trans::forward(s, d, ns, nd, 1, 1, 1);
+
+				// copy d into output
+				copy_output(it, d, aout, ns, n);
+				
+				// If I have more levels... keep going
+				for (size_t lvl = 1; lvl < level; ++lvl) {
+					// use "d" as the new buffer to deinterleave into (which should have enough space),
+					// alloc_temp function adds an extra buffer element for odd transform lengths at each level)
+					deinterleave(s, d, ns);
+					nd = ns / 2;
+					ns = ns - nd;
+					
+					// get pointers to the starts of s and d;
+					s = d;
+					d = d + ns;
+					trans::forward(s, d, ns, nd, 1, 1, 1);
+					
+					// copy d into output;
+					copy_output(it, d, aout, ns, ns + nd);
+				}
+				// copy last s into output;
+				copy_output(it, s, aout, 0, ns);
+			}
+
+			template<typename T, size_t vlen>
+			static inline void vec_apply(const multi_iter<vlen>& it, const cndarr<T>& ain, ndarr<T>& aout, T* WAVELETS_RESTRICT buf, const size_t n, const size_t level) {
+				if (level == 0) return;
+
+				size_t nd = n / 2;
+				size_t ns = n - nd;
+
+				vec_deinterleave_input(it, ain, buf, n);
+
+				T* s = buf;
+				T* d = buf + vlen * ns;
+				trans::forward(s, d, ns, nd, vlen, vlen, vlen);
+
+				vec_copy_output(it, d, aout, ns, n);
+
+				for (size_t lvl = 1; lvl < level; ++lvl) {
+					vec_deinterleave<T, vlen>(s, d, ns);
+
+					nd = ns / 2;
+					ns = ns - nd;
+
+					s = d;
+					d = s + vlen * ns;
+					trans::forward(s, d, ns, nd, vlen, vlen, vlen);
+
+					vec_copy_output(it, d, aout, ns, ns + nd);
+				}
+				vec_copy_output(it, s, aout, 0, ns);
+			}
+		};
+
+		template<typename WVLT, typename BC>
+		struct inverse_driver {
+			using wavelet = WVLT;
+			using trans = LiftingTransform<WVLT, BC>;
+
+			template<typename T, size_t vlen>
+			static inline void apply(const multi_iter<vlen>& it, const cndarr<T>& ain, ndarr<T>& aout, T* WAVELETS_RESTRICT buf, const size_t n, const size_t n_levels = 1) {
+				if (n_levels == 0) return;
+
+				auto ns_s = std::vector<size_t>(n_levels);
+				auto nd_s = std::vector<size_t>(n_levels);
+				auto buffer_offsets = std::vector<size_t>(n_levels);
+				size_t nd = n / 2;
+				size_t ns = n - nd;
+				size_t offsets = 0;
+				for (size_t lvl = 0; lvl < n_levels; ++lvl) {
+					buffer_offsets[lvl] = offsets;
+					ns_s[lvl] = ns;
+					nd_s[lvl] = nd;
+					offsets += ns;
+					nd = ns / 2;
+					ns = ns - nd;
+				}
+				T* s = buffer_offsets[n_levels - 1];
+				T* d;
+				// copy last level's s into the s_buffer;
+				copy_input(it, ain, s, ns);
+				for (size_t lvl = n_levels; lvl-- > 1;) {  // loops to the second to last level
+					ns = ns_s[lvl];
+					nd = nd_s[lvl];
+
+					d = s + ns;
+					// copy this level's d into the d_buffer;
+					copy_input(it, ain, d, ns, ns + nd);
+
+					// transform this level in place
+					trans::inverse(s, d, ns, nd, 1, 1, 1);
+					
+					// interleave s and d into the next s_buffer;
+					T* next_s = buf + buffer_offsets[lvl - 1];
+					interleave(s, buf + next_s, ns + nd);
+					s = next_s;
+				}
+				ns = ns_s[0];
+				nd = nd_s[0];
+				d = s + ns;
+				// copy the last levels input into the d buffer;
+				copy_input(it, ain, d, ns, ns + nd);
+
+				trans::inverse(s, d, ns, nd, 1, 1, 1);
+
+				// interleave the buffer into the output;
+				interleave_output(it, buf, aout);
+			}
+
+			template<typename T, size_t vlen>
+			static inline void vec_apply(const multi_iter<vlen>& it, const cndarr<T>& ain, ndarr<T>& aout, T* WAVELETS_RESTRICT buf, const size_t n, const size_t n_levels = 1) {
+
+				if (n_levels == 0) return;
+
+				auto ns_s = std::vector<size_t>(n_levels);
+				auto nd_s = std::vector<size_t>(n_levels);
+				auto buffer_offsets = std::vector<size_t>(n_levels);
+				size_t nd = n / 2;
+				size_t ns = n - nd;
+				size_t offsets = 0;
+				for (size_t lvl = 0; lvl < n_levels; ++lvl) {
+					buffer_offsets[lvl] = offsets;
+					ns_s[lvl] = ns;
+					nd_s[lvl] = nd;
+					offsets += ns;
+					nd = ns / 2;
+					ns = ns - nd;
+				}
+				T* s = buf + vlen * buffer_offsets[n_levels - 1];
+				T* d;
+				// copy last level's s into the s_buffer;
+				vec_copy_input(it, ain, s, ns);
+				for (size_t lvl = n_levels; lvl-- > 1;) {  // loops to the second to last level
+					ns = ns_s[lvl];
+					nd = nd_s[lvl];
+
+					d = s + vlen * ns;
+					// copy this level's d into the d_buffer;
+					vec_copy_input(it, ain, d, ns, ns + nd);
+
+					// transform this level in place
+					trans::inverse(s, d, ns, nd, vlen, vlen, vlen);
+
+					T* next_s = buf + vlen * buffer_offsets[lvl - 1];
+					// interleave s and d into the next s_buffer;
+					vec_interleave<T, vlen>(s, next_s, ns + nd);
+					s = next_s;
+				}
+				ns = ns_s[0];
+				nd = nd_s[0];
+				d = s + vlen * ns;
+				// copy the last levels input into the d buffer;
+				vec_copy_input(it, ain, d, ns, ns + nd);
+
+				trans::inverse(s, d, ns, nd, 1, 1, 1);
+
+				// interleave the buffer into the output;
+				vec_interleave_output(it, buf, aout);
+			}
+		};
+
+		template<typename WVLT, typename BC>
+		struct forward_adjoint_driver {
+			using wavelet = WVLT;
+			using trans = LiftingTransform<WVLT, BC>;
+
+			template<typename T, size_t vlen>
+			static inline void apply(const multi_iter<vlen>& it, const cndarr<T>& ain, ndarr<T>& aout, T* WAVELETS_RESTRICT buf, const size_t n, const size_t n_levels = 1) {
+				copy_input(it, ain, buf);
+
+				size_t nd = n / 2;
+				size_t ns = n - nd;
+
+				T* s = buf;
+				T* d = buf + ns;
+				trans::forward_adjoint(s, d, ns, nd, 1, 1, 1);
+
+				interleave_output(it, buf, aout);
+			}
+
+			template<typename T, size_t vlen>
+			static inline void vec_apply(const multi_iter<vlen>& it, const cndarr<T>& ain, ndarr<T>& aout, T* WAVELETS_RESTRICT buf, const size_t n, const size_t n_levels = 1) {
+				vec_copy_input(it, ain, buf);
+
+				size_t nd = n / 2;
+				size_t ns = n - nd;
+
+				T* s = buf;
+				T* d = buf + vlen * ns;
+				trans::forward_adjoint(s, d, ns, nd, vlen, vlen, vlen);
+
+				vec_interleave_output(it, buf, aout);
+			}
+		};
+
+		template<typename WVLT, typename BC>
+		struct inverse_adjoint_driver {
+			using wavelet = WVLT;
+			using trans = LiftingTransform<WVLT, BC>;
+
+			template<typename T, size_t vlen>
+			static inline void apply(const multi_iter<vlen>& it, const cndarr<T>& ain, ndarr<T>& aout, T* WAVELETS_RESTRICT buf, const size_t n, const size_t n_levels = 1) {
+
+				size_t nd = n / 2;
+				size_t ns = n - nd;
+
+				deinterleave_input(it, ain, buf, n);
+
+				T* s = buf;
+				T* d = buf + ns;
+				trans::inverse_adjoint(s, d, ns, nd, 1, 1, 1);
+
+				copy_output(it, buf, aout, n);
+
+				if (n_levels > 1) apply(it, ain, aout, buf, ns, n_levels - 1);
+			}
+
+			template<typename T, size_t vlen>
+			static inline void vec_apply(const multi_iter<vlen>& it, const cndarr<T>& ain, ndarr<T>& aout, T* WAVELETS_RESTRICT buf, const size_t n, const size_t n_levels = 1) {
+				size_t n_ = n;
+				for (size_t lvl = 0; lvl < n_levels; ++lvl) {
+					size_t nd = n_ / 2;
+					size_t ns = n_ - nd;
+					const auto& tin(lvl == 0 ? ain : aout);
+
+					vec_deinterleave_input(it, ain, buf, n_);
+
+					T* s = buf;
+					T* d = buf + vlen * ns;
+					trans::inverse_adjoint(s, d, ns, nd, vlen, vlen, vlen);
+
+					vec_copy_output(it, buf, aout, n_);
+					n_ = ns;
+				}
+			}
+		};
+
+		template<typename WVLT>
+		static size_t max_level(size_t n) {
+			if (WVLT::width == 0) return 0;
+			if (n < WVLT::width - 1) return 0;
+			size_t lvl = 0;
+			while (n >= 2 * (WVLT::width - 1)) {
+				lvl += 1;
+				n = (n + 1) / 2;  // If n is even, this is equivalent to n/2, if it is odd, then this is n - n/2
+			}
+			return lvl;
+		}
+
+		template<typename WVLT>
+		static size_t max_level(const size_v& shape, const size_v& axes) {
+			size_t min_n = shape[axes[0]];
+			for (size_t i = 1; i < shape.size(); ++i)
+				if (shape[axes[i]] < min_n) min_n = shape[axes[i]];
+			return max_level<WVLT>(min_n);
+		}
+
+		template<typename driver, typename T>
+		static void general_nd(
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+			const T* data_in, T* data_out, const size_t n_threads
+		) {
 			static constexpr auto vlen = VLEN<T>::val;
 
 			auto ain = cndarr<T>(data_in, shape, stride_in);
 			auto aout = ndarr<T>(data_out, shape, stride_out);
 
-			cout << "ain:" << ain.shape(0) << ", " << ain.stride(0) << endl;
-
 			for (size_t iax = 0; iax < axes.size(); ++iax) {
-				size_t len = ain.shape(iax);
-				size_t nd = len / 2;
-				size_t ns = len - nd;
+				size_t ax = axes[iax];
+				size_t len = ain.shape(ax);
+				size_t level = levels[iax];
+				if (level == 0) level = max_level<typename driver::wavelet>(len);
 
-				cout << len << ", " << ns << ", " << nd << endl;
-
-				//threading::thread_map(
-				//	threading::thread_count(n_threads, ain.shape(), axes[iax], vlen),
-				//	[&] {
-						//auto storage = alloc_tmp<T>(ain.shape(), len);
-						auto storage = aligned_array<T>(tmp_size<vlen>(ain.shape(), len));
+				threading::thread_map(
+					threading::thread_count(n_threads, ain.shape(), axes[iax], vlen),
+					[&] {
+						auto storage = alloc_tmp<T>(ain.shape(), len, level);
 						const auto& tin(iax == 0 ? ain : aout);
-						multi_iter<vlen> it(tin, aout, axes[iax]);
+						multi_iter<vlen> it(tin, aout, ax);
 
-						cout << "Threaded: " << threading::thread_id() << ", " << threading::num_threads() << endl;
-						cout << "vlen = " << vlen << endl;
-						cout << "it remaining start:" << it.remaining() << endl;
 #ifndef WAVELETS_NO_VECTORS
 						if (vlen > 1) {
 							while (it.remaining() >= vlen) {
-								cout << "v it remaining: " << it.remaining() << endl;
 								it.advance(vlen);
 
-								T* buf = storage.data();
-								// deinterleave input into buffer
-								// vec_copy_input(it, tin, buf);
-								vec_deinterleave_input(it, tin, buf);
-
-
-								cout << "Here v 1" << endl;
-
-								// perform single level forward transform
-								T* s = buf;
-								// T* d = buf + vlen * ns;
-								// trans::forward(s, d, ns, nd, vlen, vlen, vlen);
-
-								cout << "Here v 2" << endl;
-
-								// copy storage to out
-								vec_copy_output(it, buf, aout);
-
-								cout << "Here v 3" << endl;
+								driver::vec_apply(it, tin, aout, storage.data(), len, level);
 							}
 						}
 #endif
 						while (it.remaining() > 0) {
-							cout << "it remaining: " << it.remaining() << endl;
 							it.advance(1);
-							T* buf = storage.data();
-							// deinterleave input into buffer
-							deinterleave_input(it, tin, buf);
-
-							cout << "Here 1" << endl;
-
-							// perform single level forward transform
-							T* s = buf;
-							T* d = buf + ns;
-							// trans::forward(s, d, ns, nd, 1, 1, 1);
-
-							cout << "Here 2" << endl;
-							//copy buffer to output;
-							copy_output(it, buf, aout);
-
-
-							cout << "Here 3" << endl;
+							driver::apply(it, tin, aout, storage.data(), len, level);
 						}
-
-				//	cout << "End Parallel" << endl;
-				//	}
-				//);  // end of parallel region
-				//cout << "After Parallel" << endl;
+					}
+				);  // end of parallel region
 			}
-
-			cout << "dwt end" << endl;
 		}
-	}
 
+		template<typename driver, typename T>
+		static void general_nd(
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+			const T* data_in, T* data_out, const size_t n_threads
+		) {
+			static constexpr auto vlen = VLEN<T>::val;
 
-	template<typename WVLT>
-	static size_t max_level(size_t n) {
-		if (WVLT::width == 0) return 0;
-		if (n < WVLT::width - 1) return 0;
-		size_t lvl = 0;
-		while (n >= 2 * (WVLT::width - 1)) {
-			lvl += 1;
-			n = (n + 1) / 2;  // If n is even, this is equivalent to n, if it is odd, then this is n - n/2
+			size_t lvl = level;
+			if (lvl == 0) lvl = max_level<typename driver::wavelet>(shape, axes);
+
+			size_v shape_ = size_v(shape);
+
+			for (size_t ilvl = 0; ilvl < lvl; ++ilvl) {
+
+				auto ain = cndarr<T>(data_in, shape_, stride_in);
+				auto aout = ndarr<T>(data_out, shape_, stride_out);
+
+				for (size_t iax = 0; iax < axes.size(); ++iax) {
+					size_t ax = axes[iax];
+					size_t len = ain.shape(ax);
+
+					threading::thread_map(
+						threading::thread_count(n_threads, ain.shape(), axes[iax], vlen),
+						[&] {
+							auto storage = alloc_tmp<T>(ain.shape(), len, level);
+							const auto& tin(iax == 0 ? ain : aout);
+							multi_iter<vlen> it(tin, aout, ax);
+
+#ifndef WAVELETS_NO_VECTORS
+							if (vlen > 1) {
+								while (it.remaining() >= vlen) {
+									it.advance(vlen);
+
+									driver::vec_apply(it, tin, aout, storage.data(), len, 1);
+								}
+							}
+#endif
+							while (it.remaining() > 0) {
+								it.advance(1);
+								driver::apply(it, tin, aout, storage.data(), len, 1);
+							}
+						}
+					);  // end of parallel region
+				}
+
+				data_in = data_out;
+				for (auto ax : axes) shape_[ax] = shape_[ax] - shape_[ax] / 2;
+			}
 		}
-		return lvl;
+
+		template<typename WVLT, typename BC, typename T>
+		static void dwt(
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+			const T* data_in, T* data_out, const size_t n_threads = 1
+		) {
+			using driver = forward_driver<WVLT, BC>;
+			general_nd<driver>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+		}
+
+		template<typename WVLT, typename BC, typename T>
+		static void dwt(
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+			const T* data_in, T* data_out, const size_t n_threads = 1
+		) {
+			using driver = forward_driver<WVLT, BC>;
+			general_nd<driver>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+		}
+
+		template<typename WVLT, typename BC, typename T>
+		static void idwt(
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+			const T* data_in, T* data_out, size_t n_threads
+		) {
+			using driver = inverse_driver<WVLT, BC>;
+			general_nd<driver>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+		}
 	}
 
 	// Hard Coded Wavelets
@@ -1655,8 +2054,9 @@ namespace wavelets {
 	// The transform driver
 	using detail::LiftingTransform;
 
-	// Single level callable
+	using detail::max_level;
 	using detail::dwt;
+	using detail::idwt;
 }
 
 #endif
