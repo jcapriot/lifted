@@ -339,10 +339,10 @@ TEST_P(TestShapesAndAxes, ValidateDWTAdjointSingleLevel) {
     auto levels = size_v(shape.size(), 1);
 
     // initialize inputs and outputs
-    std::vector<prec> x(sz);
-    std::vector<prec> x_w(sz);
     std::vector<prec> u(sz);
-    std::vector<prec> u_w(sz);
+    std::vector<prec> f_u(sz);
+    std::vector<prec> v(sz);
+    std::vector<prec> ft_v(sz);
 
     auto strides = stride_v(ndim);
     strides[ndim - 1] = 1;
@@ -350,14 +350,14 @@ TEST_P(TestShapesAndAxes, ValidateDWTAdjointSingleLevel) {
         size_t ir = ndim - i;
         strides[ir] = shape[ir + 1] * strides[ir + 1];
     }
-    fill_rand(x, 44123);
-    fill_rand(u_w, 48287);
+    fill_sin(u, -11024.0, 1123.321);
+    fill_sin(v, -5698234.42, 2615.53);
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, levels, x.data(), x_w.data());
-    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, u_w.data(), u.data());
+    dwt<WVLT, BC>(shape, strides, strides, axes, levels, u.data(), f_u.data());
+    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, v.data(), ft_v.data());
 
-    prec v1 = std::inner_product(x_w.begin(), x_w.end(), u.begin(), 0);
-    prec v2 = std::inner_product(x.begin(), x.end(), u_w.begin(), 0);
+    prec v1 = std::inner_product(v.begin(), v.end(), f_u.begin(), prec(0));
+    prec v2 = std::inner_product(ft_v.begin(), ft_v.end(), u.begin(), prec(0));
 
     prec rtol = 1E-7;
     prec atol = 0.0;
@@ -379,10 +379,10 @@ TEST_P(TestShapesAndAxes, ValidateDWTAdjointSeperableMultipleLevel) {
     auto levels = size_v(shape.size(), 3);
 
     // initialize inputs and outputs
-    std::vector<prec> x(sz);
-    std::vector<prec> x_w(sz);
     std::vector<prec> u(sz);
-    std::vector<prec> u_w(sz);
+    std::vector<prec> f_u(sz);
+    std::vector<prec> v(sz);
+    std::vector<prec> ft_v(sz);
 
     auto strides = stride_v(ndim);
     strides[ndim - 1] = 1;
@@ -390,14 +390,14 @@ TEST_P(TestShapesAndAxes, ValidateDWTAdjointSeperableMultipleLevel) {
         size_t ir = ndim - i;
         strides[ir] = shape[ir + 1] * strides[ir + 1];
     }
-    fill_rand(x, 44123);
-    fill_rand(u_w, 48287);
+    fill_sin(u, -11024.0, 1123.321);
+    fill_sin(v, -5698234.42, 2615.53);
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, levels, x.data(), x_w.data());
-    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, u_w.data(), u.data());
+    dwt<WVLT, BC>(shape, strides, strides, axes, levels, u.data(), f_u.data());
+    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, v.data(), ft_v.data());
 
-    prec v1 = std::inner_product(x_w.begin(), x_w.end(), u.begin(), 0);
-    prec v2 = std::inner_product(x.begin(), x.end(), u_w.begin(), 0);
+    prec v1 = std::inner_product(v.begin(), v.end(), f_u.begin(), prec(0));
+    prec v2 = std::inner_product(ft_v.begin(), ft_v.end(), u.begin(), prec(0));
 
     prec rtol = 1E-7;
     prec atol = 0.0;
@@ -419,10 +419,10 @@ TEST_P(TestShapesAndAxes, ValidateDWTAdjointMultipleLevel) {
     size_t level = 2;
 
     // initialize inputs and outputs
-    std::vector<prec> x(sz);
-    std::vector<prec> x_w(sz);
     std::vector<prec> u(sz);
-    std::vector<prec> u_w(sz);
+    std::vector<prec> f_u(sz);
+    std::vector<prec> v(sz);
+    std::vector<prec> ft_v(sz);
 
     auto strides = stride_v(ndim);
     strides[ndim - 1] = 1;
@@ -430,14 +430,14 @@ TEST_P(TestShapesAndAxes, ValidateDWTAdjointMultipleLevel) {
         size_t ir = ndim - i;
         strides[ir] = shape[ir + 1] * strides[ir + 1];
     }
-    fill_rand(x, 44123);
-    fill_rand(u_w, 48287);
+    fill_sin(u, -11024.0, 1123.321);
+    fill_sin(v, -5698234.42, 2615.53);
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, level, x.data(), x_w.data());
-    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, level, u_w.data(), u.data());
+    dwt<WVLT, BC>(shape, strides, strides, axes, level, u.data(), f_u.data());
+    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, level, v.data(), ft_v.data());
 
-    prec v1 = std::inner_product(x_w.begin(), x_w.end(), u.begin(), 0);
-    prec v2 = std::inner_product(x.begin(), x.end(), u_w.begin(), 0);
+    prec v1 = std::inner_product(v.begin(), v.end(), f_u.begin(), prec(0));
+    prec v2 = std::inner_product(ft_v.begin(), ft_v.end(), u.begin(), prec(0));
 
     prec rtol = 1E-7;
     prec atol = 0.0;
