@@ -238,19 +238,165 @@ static void run_dwt_test(size_v& shape, size_v& axes, size_t level) {
     }
 }
 
+static void run_idwt_test(size_v& shape, size_v& axes) {
+
+    cout << "single level inverse test" << endl;
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    using trans = LiftingTransform<WVLT, BC>;
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    auto levels = size_v(shape.size(), 1);
+
+    size_t n_last = shape[ndim - 1];
+    size_t n_other = sz / n_last;
+
+    // initialize inputs and outputs
+    std::vector<prec> x_0(sz);
+    std::vector<prec> x_w(sz);
+    std::vector<prec> x_1(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+
+    for (size_t i = 0; i < n_other; ++i) {
+        auto in_span = std::span(x_0.data() + i * n_last, n_last);
+        test_helpers::fill_sin(in_span, -10.0, 11.0, i + 1.0);
+    }
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
+    idwt<WVLT, BC>(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
+
+    prec rtol = 1E-7;
+    prec atol = 0.0;
+    for (size_t i = 0; i < sz; ++i) {
+        prec err = std::abs(x_1[i] - x_0[i]);
+        prec thresh = atol + rtol * std::abs(x_0[i]);
+
+        if (err > thresh) {
+            cout << i << ": " << x_1[i] << "!=" << x_0[i] << endl;
+        }
+    }
+}
+
+static void run_idwt_test(size_v& shape, size_v& axes, size_v& levels) {
+
+    cout << "seperable multiple level inverse transform" << endl;
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    using trans = LiftingTransform<WVLT, BC>;
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    size_t n_last = shape[ndim - 1];
+    size_t n_other = sz / n_last;
+
+    // initialize inputs and outputs
+    std::vector<prec> x_0(sz);
+    std::vector<prec> x_w(sz);
+    std::vector<prec> x_1(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+
+    for (size_t i = 0; i < n_other; ++i) {
+        auto in_span = std::span(x_0.data() + i * n_last, n_last);
+        test_helpers::fill_sin(in_span, -10.0, 11.0, i + 1.0);
+    }
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
+    idwt<WVLT, BC>(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
+
+    prec rtol = 1E-7;
+    prec atol = 0.0;
+    for (size_t i = 0; i < sz; ++i) {
+        prec err = std::abs(x_1[i] - x_0[i]);
+        prec thresh = atol + rtol * std::abs(x_0[i]);
+
+        if (err > thresh) {
+            cout << i << ": " << x_1[i] << "!=" << x_0[i] << endl;
+        }
+    }
+}
+
+static void run_idwt_test(size_v& shape, size_v& axes, size_t level) {
+
+    cout << "multiple level inverse transform" << endl;
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    using trans = LiftingTransform<WVLT, BC>;
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    size_t n_last = shape[ndim - 1];
+    size_t n_other = sz / n_last;
+
+    // initialize inputs and outputs
+    std::vector<prec> x_0(sz);
+    std::vector<prec> x_w(sz);
+    std::vector<prec> x_1(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+
+    for (size_t i = 0; i < n_other; ++i) {
+        auto in_span = std::span(x_0.data() + i * n_last, n_last);
+        test_helpers::fill_sin(in_span, -10.0, 11.0, i + 1.0);
+    }
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, level, x_0.data(), x_w.data());
+    idwt<WVLT, BC>(shape, strides, strides, axes, level, x_w.data(), x_1.data());
+
+    prec rtol = 1E-7;
+    prec atol = 0.0;
+    for (size_t i = 0; i < sz; ++i) {
+        prec err = std::abs(x_1[i] - x_0[i]);
+        prec thresh = atol + rtol * std::abs(x_0[i]);
+
+        if (err > thresh) {
+            cout << i << ": " << x_1[i] << "!=" << x_0[i] << endl;
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
 
     using T = double;
 
-    auto shape = size_v {15, 31 };
-    auto axes = size_v{ 0, 1 };
+    auto shape = size_v {32, 38 };
+    auto axes = size_v{ 1 };
     // single level
     run_dwt_test(shape, axes);
+    run_idwt_test(shape, axes);
 
     // seperable transform
-    auto levels = size_v{ 2 , 2};
+    auto levels = size_v{ 2};
     run_dwt_test(shape, axes, levels);
+    run_idwt_test(shape, axes, levels);
 
     // non-seperable transform
-    run_dwt_test(shape, axes, 2);
+    run_dwt_test(shape, axes, 3);
+    run_idwt_test(shape, axes, 3);
 }

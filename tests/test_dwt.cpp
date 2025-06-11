@@ -2,6 +2,7 @@
 #include <tuple>
 #include <vector>
 #include <span>
+#include <numeric>
 
 #include "wavelets.hpp"
 #include "ndarray.hpp"
@@ -174,7 +175,7 @@ TEST_P(TestShapesAndAxes, ValidateDWTMultipleLevel) {
         strides[ir] = shape[ir + 1] * strides[ir + 1];
     }
     ;
-    fill_sin(input, -1000.0, 1000.0);
+    fill_sin(input, -1000.0, 1001.0);
 
     auto shape_ = size_v(shape);
     prec* ain = input.data();
@@ -208,6 +209,240 @@ TEST_P(TestShapesAndAxes, ValidateDWTMultipleLevel) {
     for (size_t i = 0; i < sz; ++i) {
         EXPECT_EQ(output[i], output_ref[i]);
     }
+}
+
+
+TEST_P(TestShapesAndAxes, ValidateIDWTSingleLevel) {
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    const auto& [shape, axes] = GetParam();
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    auto levels = size_v(shape.size(), 1);
+
+    // initialize inputs and outputs
+    std::vector<prec> x_0(sz);
+    std::vector<prec> x_w(sz);
+    std::vector<prec> x_1(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+    fill_sin(x_0, -1000.0, 1001.0);
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
+    idwt<WVLT, BC>(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
+
+    prec rtol = 1E-7;
+    prec atol = 0.0;
+
+    for (size_t i = 0; i < sz; ++i) {
+        prec thresh = atol + rtol * std::abs(x_0[i]);
+        EXPECT_NEAR(x_0[i], x_1[i], thresh);
+    }
+}
+
+
+TEST_P(TestShapesAndAxes, ValidateIDWTSeperableMultipleLevel) {
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    const auto& [shape, axes] = GetParam();
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    auto levels = size_v(shape.size(), 3);
+
+    // initialize inputs and outputs
+    std::vector<prec> x_0(sz);
+    std::vector<prec> x_w(sz);
+    std::vector<prec> x_1(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+    fill_sin(x_0, -1000.0, 1001.0);
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
+    idwt<WVLT, BC>(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
+
+    prec rtol = 1E-7;
+    prec atol = 0.0;
+
+    for (size_t i = 0; i < sz; ++i) {
+        prec thresh = atol + rtol * std::abs(x_0[i]);
+        EXPECT_NEAR(x_0[i], x_1[i], thresh);
+    }
+}
+
+
+TEST_P(TestShapesAndAxes, ValidateIDWTMultipleLevel) {
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    const auto& [shape, axes] = GetParam();
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    size_t level = 3;
+
+    // initialize inputs and outputs
+    std::vector<prec> x_0(sz);
+    std::vector<prec> x_w(sz);
+    std::vector<prec> x_1(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+    fill_sin(x_0, -1000.0, 1001.0);
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, level, x_0.data(), x_w.data());
+    idwt<WVLT, BC>(shape, strides, strides, axes, level, x_w.data(), x_1.data());
+
+    prec rtol = 1E-7;
+    prec atol = 0.0;
+
+    for (size_t i = 0; i < sz; ++i) {
+        prec thresh = atol + rtol * std::abs(x_0[i]);
+        EXPECT_NEAR(x_0[i], x_1[i], thresh);
+    }
+}
+
+
+TEST_P(TestShapesAndAxes, ValidateDWTAdjointSingleLevel) {
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    const auto& [shape, axes] = GetParam();
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    auto levels = size_v(shape.size(), 1);
+
+    // initialize inputs and outputs
+    std::vector<prec> x(sz);
+    std::vector<prec> x_w(sz);
+    std::vector<prec> u(sz);
+    std::vector<prec> u_w(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+    fill_rand(x, 44123);
+    fill_rand(u_w, 48287);
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, levels, x.data(), x_w.data());
+    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, u_w.data(), u.data());
+
+    prec v1 = std::inner_product(x_w.begin(), x_w.end(), u.begin(), 0);
+    prec v2 = std::inner_product(x.begin(), x.end(), u_w.begin(), 0);
+
+    prec rtol = 1E-7;
+    prec atol = 0.0;
+    prec thresh = atol + rtol * std::abs(v2);
+    EXPECT_NEAR(v1, v2, thresh);
+}
+
+
+TEST_P(TestShapesAndAxes, ValidateDWTAdjointSeperableMultipleLevel) {
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    const auto& [shape, axes] = GetParam();
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    auto levels = size_v(shape.size(), 3);
+
+    // initialize inputs and outputs
+    std::vector<prec> x(sz);
+    std::vector<prec> x_w(sz);
+    std::vector<prec> u(sz);
+    std::vector<prec> u_w(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+    fill_rand(x, 44123);
+    fill_rand(u_w, 48287);
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, levels, x.data(), x_w.data());
+    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, u_w.data(), u.data());
+
+    prec v1 = std::inner_product(x_w.begin(), x_w.end(), u.begin(), 0);
+    prec v2 = std::inner_product(x.begin(), x.end(), u_w.begin(), 0);
+
+    prec rtol = 1E-7;
+    prec atol = 0.0;
+    prec thresh = atol + rtol * std::abs(v2);
+    EXPECT_NEAR(v1, v2, thresh);
+}
+
+
+TEST_P(TestShapesAndAxes, ValidateDWTAdjointMultipleLevel) {
+
+    using prec = double;
+    using WVLT = Daubechies2<prec>;
+    using BC = ZeroBoundary;
+    const auto& [shape, axes] = GetParam();
+
+    size_t sz = prod(shape);
+    size_t ndim = shape.size();
+
+    size_t level = 2;
+
+    // initialize inputs and outputs
+    std::vector<prec> x(sz);
+    std::vector<prec> x_w(sz);
+    std::vector<prec> u(sz);
+    std::vector<prec> u_w(sz);
+
+    auto strides = stride_v(ndim);
+    strides[ndim - 1] = 1;
+    for (size_t i = 2; i <= ndim; ++i) {
+        size_t ir = ndim - i;
+        strides[ir] = shape[ir + 1] * strides[ir + 1];
+    }
+    fill_rand(x, 44123);
+    fill_rand(u_w, 48287);
+
+    dwt<WVLT, BC>(shape, strides, strides, axes, level, x.data(), x_w.data());
+    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, level, u_w.data(), u.data());
+
+    prec v1 = std::inner_product(x_w.begin(), x_w.end(), u.begin(), 0);
+    prec v2 = std::inner_product(x.begin(), x.end(), u_w.begin(), 0);
+
+    prec rtol = 1E-7;
+    prec atol = 0.0;
+    prec thresh = atol + rtol * std::abs(v2);
+    EXPECT_NEAR(v1, v2, thresh);
 }
 
 

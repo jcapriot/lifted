@@ -1,6 +1,7 @@
 project(
 	'pocket_wavelets',
 	'cpp',
+	version: '0.0.1_alpha',
 	default_options :[
 		'buildtype=release',
 		'b_ndebug=if-release',

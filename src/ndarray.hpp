@@ -185,7 +185,7 @@ namespace threading {
 
 #else
 
-    static size_t thread_count(size_t nthreads, const size_v& shape,
+    static inline size_t thread_count(size_t nthreads, const size_v& shape,
         size_t axis, size_t vlen)
     {
         if (nthreads == 1) return 1;

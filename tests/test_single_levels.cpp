@@ -25,7 +25,7 @@ using namespace test_helpers;
 
 // Define type lists
 using WVLTs = TestWavelets;
-using BCs = BoundaryConditions;
+using BCs = AllBoundaryConditions;
 using Ns = std::integer_sequence<size_t, 512, 331>;
 
 using WaveletTestMatrix = typename generate_all<WVLTs, Ns, BCs>::type;

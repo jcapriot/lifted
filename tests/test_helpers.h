@@ -279,4 +279,36 @@ namespace test_helpers {
 		WaveletSDUpdate,
 		WaveletSDUpdateScale
 	>;
+
+	template<typename T>
+	using AllWavelets = std::tuple <
+		wavelets::Haar<T>,
+		wavelets::Daubechies1<T>,
+		wavelets::Daubechies2<T>,
+		wavelets::Daubechies3<T>,
+		wavelets::Daubechies4<T>,
+		wavelets::Daubechies5<T>,
+		wavelets::Daubechies6<T>,
+		wavelets::Daubechies7<T>,
+		wavelets::BiorSpline3_1<T>,
+		wavelets::BiorSpline4_2<T>,
+		wavelets::BiorSpline2_4<T>,
+		wavelets::BiorSpline6_2<T>,
+		wavelets::ReverseBiorSpline3_1<T>,
+		wavelets::ReverseBiorSpline4_2<T>,
+		wavelets::ReverseBiorSpline2_4<T>,
+		wavelets::ReverseBiorSpline6_2<T>,
+		wavelets::CDF5_3<T>,
+		wavelets::ReverseCDF5_3<T>,
+		wavelets::CDF9_7<T>,
+		wavelets::ReverseCDF9_7<T>
+	> ;
+
+	using AllBoundaryConditions = std::tuple<
+		wavelets::ZeroBoundary,
+		wavelets::ConstantBoundary,
+		wavelets::PeriodicBoundary,
+		wavelets::SymmetricBoundary,
+		wavelets::ReflectBoundary
+	>;
 }
