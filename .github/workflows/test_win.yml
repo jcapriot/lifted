@@ -28,7 +28,7 @@ jobs:
         run: meson setup builddir -Dbuild_tests=True -Dvsenv=True
 
       - name: Build
-        run: meson compile -C builddir
+        run: meson compile -C builddir -v
 
       - name: Test
         run: meson test -C builddir -vv
@@ -53,7 +53,8 @@ jobs:
 
       - name: Configure Build
         run: |
-            meson setup builddir -Dbuild_tests=True
+            $env:LDFLAGS="/LIBPATH:$env:CONDA_PREFIX\Library\lib"
+            meson setup builddir -Dbuild_tests=True cpp_link_args
         env:
           CXX: icx-cl
 
@@ -89,7 +90,7 @@ jobs:
           CXX: g++-14
 
       - name: Build
-        run: meson compile -C builddir
+        run: meson compile -C builddir -v
 
       - name: Test
         run: meson test -C builddir -vv
@@ -120,7 +121,7 @@ jobs:
           CXX: clang++-18
 
       - name: Build
-        run: meson compile -C builddir
+        run: meson compile -C builddir -v
 
       - name: Test
         run: meson test -C builddir -vv
@@ -156,7 +157,7 @@ jobs:
           CXX: icx
 
       - name: Build
-        run: meson compile -C builddir
+        run: meson compile -C builddir -v
 
       - name: Test
         run: meson test -C builddir -vv
@@ -187,7 +188,7 @@ jobs:
           CXX: g++-15
 
       - name: Build
-        run: meson compile -C builddir
+        run: meson compile -C builddir -v
 
       - name: Test
         run: meson test -C builddir -vv
@@ -218,7 +219,7 @@ jobs:
           CXX: /opt/homebrew/opt/llvm/bin/clang++
 
       - name: Build
-        run: meson compile -C builddir
+        run: meson compile -C builddir -v
 
       - name: Test
         run: meson test -C builddir -vv
