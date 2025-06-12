@@ -57,7 +57,7 @@ jobs:
       - name: Install Intel oneAPI BaseKit
         # if: steps.cache-oneapi.outputs.cache-hit != 'true'
         run: |
-          Start-Process -Wait -FilePath .\basekit.exe -ArgumentList '-a', '--silent', '--eula', 'accept', '-p=NEED_VS2019_INTEGRATION=0', '--components', 'intel.oneapi.win.cpp-compiler', '--install-dir', 'C:\Intel\'
+          Start-Process -Wait -FilePath .\basekit.exe -ArgumentList '-a', '--eula', 'accept', '-p=NEED_VS2019_INTEGRATION=0', '--components', 'intel.oneapi.win.cpp-compiler'
 
       - name: Setup python
         uses: actions/setup-python@v5
