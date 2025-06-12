@@ -15,6 +15,7 @@
 #include <iostream>
 #include <initializer_list>
 #include <cstdlib>
+#include <utility>
 
 #ifndef WAVELETS_NO_MULTITHREADING
 #include <mutex>
