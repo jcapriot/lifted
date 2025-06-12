@@ -55,7 +55,7 @@ jobs:
         run: |
             meson setup builddir -Dbuild_tests=True
         env:
-          CXX: icpx
+          CXX: icx-cl
 
       - name: Build
         run: meson compile -C builddir
