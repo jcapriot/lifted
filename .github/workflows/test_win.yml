@@ -54,12 +54,12 @@ jobs:
       - name: Configure Build
         run: |
             $env:LDFLAGS="/LIBPATH:$env:CONDA_PREFIX\Library\lib"
-            meson setup builddir -Dbuild_tests=True
+            meson setup builddir -Dbuild_tests=True -Dvsenv=True
         env:
           CXX: icx-cl
 
       - name: Build
-        run: meson compile -C builddir
+        run: meson compile -C builddir -v
 
       - name: Test
         run: meson test -C builddir -vv
