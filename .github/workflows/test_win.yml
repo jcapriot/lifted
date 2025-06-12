@@ -115,8 +115,8 @@ jobs:
       - name: Test
         run: meson test -C builddir -vv
 
-  CLang_UBUNTU:
-    name: CLang on ubuntu
+  LLVM_UBUNTU:
+    name: LLVM on ubuntu
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -125,7 +125,7 @@ jobs:
           persist-credentials: false
 
       - name: Install GNU compiler
-        run: sudo apt install clang-20
+        run: sudo apt install clang-18
 
       - name: Setup python
         uses: actions/setup-python@v5
@@ -138,7 +138,7 @@ jobs:
       - name: Configure Build
         run: meson setup builddir -Dbuild_tests=True
         env:
-          CXX: clang-20
+          CXX: clang-18
 
       - name: Build
         run: meson compile -C builddir
@@ -177,8 +177,8 @@ jobs:
       - name: Test
         run: meson test -C builddir -vv
 
-  Clang_MAC:
-    name: G++ on MacOS
+  LLVM_MAC:
+    name: LLVM on MacOS
     runs-on: macos-latest
     steps:
       - name: Checkout
