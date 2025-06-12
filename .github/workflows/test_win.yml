@@ -42,21 +42,22 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Cache Intel oneAPI BaseKit Installer
-        id: cache-oneapi
-        uses: actions/cache@v4
-        with:
-          path: basekit.exe
-          key: oneapi-basekit-2025.1.3
+      # - name: Cache Intel oneAPI BaseKit Installer
+      #   id: cache-oneapi
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: C:\Intel
+      #     key: oneapi-basekit-2025.1.3a
 
       - name: Download Installer if Not Cached
-        if: steps.cache-oneapi.outputs.cache-hit != 'true'
+        # if: steps.cache-oneapi.outputs.cache-hit != 'true'
         run: |
           Invoke-WebRequest -Uri https://registrationcenter-download.intel.com/akdlm/IRC_NAS/e5785fb3-b5a7-4b97-89bc-918adab1f77d/intel-oneapi-base-toolkit-2025.1.3.8_offline.exe -OutFile basekit.exe
 
       - name: Install Intel oneAPI BaseKit
+        # if: steps.cache-oneapi.outputs.cache-hit != 'true'
         run: |
-          Start-Process -Wait -FilePath .\basekit.exe -ArgumentList '-a', '--silent', '--eula', 'accept', '-p=NEED_VS2019_INTEGRATION=0', '--components', 'intel.oneapi.win.cpp-compiler'
+          Start-Process -Wait -FilePath .\basekit.exe -ArgumentList '-a', '--silent', '--eula', 'accept', '-p=NEED_VS2019_INTEGRATION=0', '--components', 'intel.oneapi.win.cpp-compiler', '--install-dir', 'C:\Intel\'
 
       - name: Setup python
         uses: actions/setup-python@v5
@@ -68,7 +69,7 @@ jobs:
 
       - name: Configure Build
         run: |
-            call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
+            call "C:\Intel\oneAPI\setvars-vcvarsall.bat"
             meson setup builddir -Dbuild_tests=True -Dvsenv=True
         shell: cmd
         env:
