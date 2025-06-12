@@ -207,7 +207,7 @@ namespace wavelets {
 			template<typename BC, typename V>
 			static inline V bc_apply(const V* x, const ptrdiff_t i, const size_t n, const stride_t stride_i, const size_t j) {
 				size_t i_bc = BC::index_of(i + offset, n);
-				if (i_bc == ptrdiff_t(n)) {
+				if (i_bc == n) {
 					return V(0.0);
 				}
 				else {
@@ -318,7 +318,7 @@ namespace wavelets {
 
 				for (ptrdiff_t i = offset, j = 1 - n_vals; i < 0; ++i, ++j) {
 					size_t io = BC::index_of(i, ns);
-					if ((io != ns) && (io != i)) {
+					if ((io != ns) && (ptrdiff_t(io) != i)) {
 						for (size_t k = 0; k < m; ++k)
 							s[io * stride_s + k] += lifter_r::bc_adj_apply(d, j, nd, stride_d, k);
 					}
@@ -336,7 +336,7 @@ namespace wavelets {
 
 				for (ptrdiff_t i = nd, j = nd + offset_r; i < ptrdiff_t(nd) - offset_r; ++i, ++j) {
 					size_t io = BC::index_of(i, ns);
-					if ((io != ns) && (io != i)) {
+					if ((io != ns) && (ptrdiff_t(io) != i)) {
 						for (size_t k = 0; k < m; ++k)
 							s[io * stride_s + k] += lifter_r::bc_adj_apply(d, j, nd, stride_d, k);
 					}
@@ -351,7 +351,7 @@ namespace wavelets {
 
 				for (ptrdiff_t i = offset, j = 1 - n_vals; i < 0; ++i, ++j) {
 					size_t io = BC::index_of(i, ns);
-					if ((io != ns) && (io != i)) {
+					if ((io != ns) && (ptrdiff_t(io) != i)) {
 						for (size_t k = 0; k < m; ++k)
 							s[io * stride_s + k] -= lifter_r::bc_adj_apply(d, j, nd, stride_d, k);
 					}
@@ -369,7 +369,7 @@ namespace wavelets {
 
 				for (ptrdiff_t i = nd, j = nd + offset_r; i < ptrdiff_t(nd) - offset_r; ++i, ++j) {
 					size_t io = BC::index_of(i, ns);
-					if ((io != ns) && (io != i)) {
+					if ((io != ns) && (ptrdiff_t(io) != i)) {
 						for (size_t k = 0; k < m; ++k)
 							s[io * stride_s + k] -= lifter_r::bc_adj_apply(d, j, nd, stride_d, k);
 					}
@@ -436,7 +436,7 @@ namespace wavelets {
 
 				for (ptrdiff_t i = offset, j = 1 - n_vals; i < 0; ++i, ++j) {
 					size_t io = BC::index_of(i, nd);
-					if ((io != nd) && (io != i)) {
+					if ((io != nd) && (ptrdiff_t(io) != i)) {
 						for (size_t k = 0; k < m; ++k)
 							d[io * stride_d + k] += lifter_r::bc_adj_apply(s, j, ns, stride_s, k);
 					}
@@ -455,7 +455,7 @@ namespace wavelets {
 
 				for (ptrdiff_t i = nd, j = nd + offset_r; i < ptrdiff_t(ns) - offset_r; ++i, ++j) {
 					size_t io = BC::index_of(i, nd);
-					if ((io != nd) && (io != i)) {
+					if ((io != nd) && (ptrdiff_t(io) != i)) {
 						for (size_t k = 0; k < m; ++k)
 							d[io * stride_d + k] += lifter_r::bc_adj_apply(s, j, ns, stride_s, k);
 					}
@@ -470,7 +470,7 @@ namespace wavelets {
 
 				for (ptrdiff_t i = offset, j = 1 - n_vals; i < 0; ++i, ++j) {
 					size_t io = BC::index_of(i, nd);
-					if ((io != nd) && (io != i)) {
+					if ((io != nd) && (ptrdiff_t(io) != i)) {
 						for (size_t k = 0; k < m; ++k)
 							d[io * stride_d + k] -= lifter_r::bc_adj_apply(s, j, ns, stride_s, k);
 					}
@@ -489,7 +489,7 @@ namespace wavelets {
 
 				for (ptrdiff_t i = nd, j = nd + offset_r; i < ptrdiff_t(ns) - offset_r; ++i, ++j) {
 					size_t io = BC::index_of(i, nd);
-					if ((io != nd) && (io != i)) {
+					if ((io != nd) && (ptrdiff_t(io) != i)) {
 						for (size_t k = 0; k < m; ++k)
 							d[io * stride_d + k] -= lifter_r::bc_adj_apply(s, j, ns, stride_s, k);
 					}
