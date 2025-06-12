@@ -33,7 +33,7 @@ jobs:
       - name: Test
         run: meson test -C builddir -vv
 
-  Intel: 
+  Intel_Win: 
     runs-on: windows-latest
     name: Intel-Win
     steps:
@@ -115,6 +115,37 @@ jobs:
       - name: Test
         run: meson test -C builddir -vv
 
+  CLang_UBUNTU:
+    name: CLang on ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install GNU compiler
+        run: sudo apt install clang-20
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.13'
+
+      - name: Install build requirements
+        run: python -m pip install meson ninja
+
+      - name: Configure Build
+        run: meson setup builddir -Dbuild_tests=True
+        env:
+          CXX: clang-20
+
+      - name: Build
+        run: meson compile -C builddir
+
+      - name: Test
+        run: meson test -C builddir -vv
+
   GNU_MAC:
     name: G++ on MacOS
     runs-on: macos-latest
@@ -139,6 +170,38 @@ jobs:
         run: meson setup builddir -Dbuild_tests=True
         env:
           CXX: g++-15
+
+      - name: Build
+        run: meson compile -C builddir
+
+      - name: Test
+        run: meson test -C builddir -vv
+
+  Clang_MAC:
+    name: G++ on MacOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install GNU compiler
+        run: brew install llvm@20 lld@20
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.13'
+
+      - name: Install build requirements
+        run: python -m pip install meson ninja
+
+      - name: Configure Build
+        run: meson setup builddir -Dbuild_tests=True
+        env:
+          CXX: llvm-20
+          CXX_LD: lld-20
 
       - name: Build
         run: meson compile -C builddir
