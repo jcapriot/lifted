@@ -94,7 +94,7 @@ jobs:
           persist-credentials: false
 
       - name: Install GNU compiler
-        run: sudo apt install g++-15
+        run: sudo apt install g++15
 
       - name: Setup python
         uses: actions/setup-python@v5
@@ -125,7 +125,7 @@ jobs:
           persist-credentials: false
 
       - name: Install GNU compiler
-        run: brew install g++-15
+        run: brew install gcc@15
 
       - name: Setup python
         uses: actions/setup-python@v5
