@@ -56,6 +56,7 @@ jobs:
 
       - name: Install Intel oneAPI BaseKit
         run: .\basekit.exe -a -s --eula accept -p=NEED_VS2019_INTEGRATION=0 --components intel.oneapi.win.cpp-compiler
+        shell: cmd
 
       - name: Setup python
         uses: actions/setup-python@v5
