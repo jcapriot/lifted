@@ -98,7 +98,7 @@ namespace wavelets {
 		// Boundary conditions
 		struct ZeroBoundary {
 			static inline size_t index_of(const ptrdiff_t i, const size_t n) {
-				if ((i < 0) || (i >= n)) {
+				if ((i < 0) || (i >= ptrdiff_t(n))) {
 					return n;
 				}
 				else {
@@ -112,7 +112,7 @@ namespace wavelets {
 				if (i < 0) {
 					return 0;
 				}
-				else if (i >= n) {
+				else if (i >= ptrdiff_t(n)) {
 					return n - 1;
 				}
 				else {
@@ -130,7 +130,7 @@ namespace wavelets {
 		struct SymmetricBoundary {
 			static inline size_t index_of(const ptrdiff_t i, const size_t n) {
 				ptrdiff_t io = i;
-				while ((io >= n) || (io < 0)) {
+				while ((io >= ptrdiff_t(n)) || (io < 0)) {
 					if (io < 0) {
 						io = -(io + 1);
 					}
@@ -145,7 +145,7 @@ namespace wavelets {
 		struct ReflectBoundary {
 			static inline size_t index_of(const ptrdiff_t i, const size_t n) {
 				ptrdiff_t io = i;
-				while ((io >= n) || (io < 0)) {
+				while ((io >= ptrdiff_t(n)) || (io < 0)) {
 					if (io < 0) {
 						io = -io;
 					}
@@ -181,7 +181,7 @@ namespace wavelets {
 
 			template<typename V>
 			static inline V bc_adj_apply(const V* x, const ptrdiff_t i, const size_t n, const stride_t stride_i, const size_t j) {
-				if (i == n) {
+				if (i == ptrdiff_t(n)) {
 					return V(0.0);
 				}
 				else if (i < 0) {
@@ -207,7 +207,7 @@ namespace wavelets {
 			template<typename BC, typename V>
 			static inline V bc_apply(const V* x, const ptrdiff_t i, const size_t n, const stride_t stride_i, const size_t j) {
 				size_t i_bc = BC::index_of(i + offset, n);
-				if (i_bc == n) {
+				if (i_bc == ptrdiff_t(n)) {
 					return V(0.0);
 				}
 				else {
@@ -217,7 +217,7 @@ namespace wavelets {
 
 			template<typename V>
 			static inline V bc_adj_apply(const V* x, const ptrdiff_t i, const size_t n, const stride_t stride_i, const size_t j) {
-				if ((i == n) || (i < 0)){
+				if ((i == ptrdiff_t(n)) || (i < 0)){
 					return V(0.0);
 				}
 				else {
@@ -282,13 +282,13 @@ namespace wavelets {
 				const stride_t stride_s, const stride_t stride_d,
 				const size_t m) {
 
-				for (ptrdiff_t i = 0; i < n_front; ++i)
+				for (ptrdiff_t i = 0; i < ptrdiff_t(n_front); ++i)
 					for (size_t j = 0; j < m; ++j)
 						d[i * stride_d + j] += lifter::template bc_apply<BC>(s, i, ns, stride_s, j);
 				for (size_t i = n_front; i < nd - n_back; ++i)
 					for (size_t j = 0; j < m; ++j)
 						d[i * stride_d + j] += lifter::apply(s, i, stride_s, j);
-				for (ptrdiff_t i = nd - n_back; i < nd; ++i)
+				for (ptrdiff_t i = nd - n_back; i < ptrdiff_t(nd); ++i)
 					for (size_t j = 0; j < m; ++j)
 						d[i * stride_d + j] += lifter::template bc_apply<BC>(s, i, ns, stride_s, j);
 			}
@@ -299,13 +299,13 @@ namespace wavelets {
 				const stride_t stride_s, const stride_t stride_d,
 				const size_t m) {
 
-				for (ptrdiff_t i = 0; i < n_front; ++i)
+				for (ptrdiff_t i = 0; i < ptrdiff_t(n_front); ++i)
 					for (size_t j = 0; j < m; ++j)
 						d[i * stride_d + j] -= lifter::template bc_apply<BC>(s, i, ns, stride_s, j);
 				for (size_t i = n_front; i < nd - n_back; ++i)
 					for (size_t j = 0; j < m; ++j)
 						d[i * stride_d + j] -= lifter::apply(s, i, stride_s, j);
-				for (ptrdiff_t i = nd - n_back; i < nd; ++i)
+				for (ptrdiff_t i = nd - n_back; i < ptrdiff_t(nd); ++i)
 					for (size_t j = 0; j < m; ++j)
 						d[i * stride_d + j] -= lifter::template bc_apply<BC>(s, i, ns, stride_s, j);
 			}
@@ -324,17 +324,17 @@ namespace wavelets {
 					}
 				}
 
-				for (ptrdiff_t i = 0; i < n_front_r; ++i)
+				for (ptrdiff_t i = 0; i < ptrdiff_t(n_front_r); ++i)
 					for (size_t k = 0; k < m; ++k)
 						s[i * stride_s + k] += lifter_r::template bc_apply<ZeroBoundary>(d, i, nd, stride_d, k);
 				for (size_t i = n_front_r; i < nd - n_back_r; ++i)
 					for (size_t k = 0; k < m; ++k)
 						s[i * stride_s + k] += lifter_r::apply(d, i, stride_d, k);
-				for (ptrdiff_t i = nd - n_back_r; i < ns; ++i)
+				for (ptrdiff_t i = nd - n_back_r; i < ptrdiff_t(ns); ++i)
 					for (size_t k = 0; k < m; ++k)
 						s[i * stride_s + k] += lifter_r::template bc_apply<ZeroBoundary>(d, i, nd, stride_d, k);
 
-				for (ptrdiff_t i = nd, j = nd + offset_r; i < nd - offset_r; ++i, ++j) {
+				for (ptrdiff_t i = nd, j = nd + offset_r; i < ptrdiff_t(nd) - offset_r; ++i, ++j) {
 					size_t io = BC::index_of(i, ns);
 					if ((io != ns) && (io != i)) {
 						for (size_t k = 0; k < m; ++k)
@@ -357,17 +357,17 @@ namespace wavelets {
 					}
 				}
 
-				for (ptrdiff_t i = 0; i < n_front_r; ++i)
+				for (ptrdiff_t i = 0; i < ptrdiff_t(n_front_r); ++i)
 					for (size_t k = 0; k < m; ++k)
 						s[i * stride_s + k] -= lifter_r::template bc_apply<ZeroBoundary>(d, i, nd, stride_d, k);
 				for (size_t i = n_front_r; i < nd - n_back_r; ++i)
 					for (size_t k = 0; k < m; ++k)
 						s[i * stride_s + k] -= lifter_r::apply(d, i, stride_d, k);
-				for (ptrdiff_t i = nd - n_back_r; i < ns; ++i)
+				for (ptrdiff_t i = nd - n_back_r; i < ptrdiff_t(ns); ++i)
 					for (size_t k = 0; k < m; ++k)
 						s[i * stride_s + k] -= lifter_r::template bc_apply<ZeroBoundary>(d, i, nd, stride_d, k);
 
-				for (ptrdiff_t i = nd, j = nd + offset_r; i < nd - offset_r; ++i, ++j) {
+				for (ptrdiff_t i = nd, j = nd + offset_r; i < ptrdiff_t(nd) - offset_r; ++i, ++j) {
 					size_t io = BC::index_of(i, ns);
 					if ((io != ns) && (io != i)) {
 						for (size_t k = 0; k < m; ++k)
@@ -400,13 +400,13 @@ namespace wavelets {
 				const stride_t stride_s, const stride_t stride_d,
 				const size_t m) {
 
-				for (ptrdiff_t i = 0; i < n_front; ++i)
+				for (ptrdiff_t i = 0; i < ptrdiff_t(n_front); ++i)
 					for (size_t j = 0; j < m; ++j)
 						s[i * stride_s + j] += lifter::template bc_apply<BC>(d, i, nd, stride_d, j);
 				for (size_t i = n_front; i < nd - n_back; ++i)
 					for (size_t j = 0; j < m; ++j)
 						s[i * stride_s + j] += lifter::apply(d, i, stride_d, j);
-				for (ptrdiff_t i = nd - n_back; i < ns; ++i)
+				for (ptrdiff_t i = nd - n_back; i < ptrdiff_t(ns); ++i)
 					for (size_t j = 0; j < m; ++j)
 						s[i * stride_s + j] += lifter::template bc_apply<BC>(d, i, nd, stride_d, j);
 			}
@@ -417,13 +417,13 @@ namespace wavelets {
 				const stride_t stride_s, const stride_t stride_d,
 				const size_t m) {
 
-				for (ptrdiff_t i = 0; i < n_front; ++i)
+				for (ptrdiff_t i = 0; i < ptrdiff_t(n_front); ++i)
 					for (size_t j = 0; j < m; ++j)
 						s[i * stride_s + j] -= lifter::template bc_apply<BC>(d, i, nd, stride_d, j);
 				for (size_t i = n_front; i < nd - n_back; ++i)
 					for (size_t j = 0; j < m; ++j)
 						s[i * stride_s + j] -= lifter::apply(d, i, stride_d, j);
-				for (ptrdiff_t i = nd - n_back; i < ns; ++i)
+				for (ptrdiff_t i = nd - n_back; i < ptrdiff_t(ns); ++i)
 					for (size_t j = 0; j < m; ++j)
 						s[i * stride_s + j] -= lifter::template bc_apply<BC>(d, i, nd, stride_d, j);
 			}
@@ -442,18 +442,18 @@ namespace wavelets {
 					}
 				}
 
-				for (ptrdiff_t i = 0; i < n_front_r; ++i)
+				for (ptrdiff_t i = 0; i < ptrdiff_t(n_front_r); ++i)
 					for (size_t k = 0; k < m; ++k)
 						d[i * stride_d + k] += lifter_r::template bc_apply<ZeroBoundary>(s, i, ns, stride_s, k);
 				for (size_t i = n_front_r; i < nd - n_back_r; ++i)
 					for (size_t k = 0; k < m; ++k)
 						d[i * stride_d + k] += lifter_r::apply(s, i, stride_s, k);
-				for (ptrdiff_t i = nd - n_back_r; i < nd; ++i)
+				for (ptrdiff_t i = nd - n_back_r; i < ptrdiff_t(nd); ++i)
 					for (size_t k = 0; k < m; ++k)
 						d[i * stride_d + k] += lifter_r::template bc_apply<ZeroBoundary>(s, i, ns, stride_s, k);
 
 
-				for (ptrdiff_t i = nd, j = nd + offset_r; i < ns - offset_r; ++i, ++j) {
+				for (ptrdiff_t i = nd, j = nd + offset_r; i < ptrdiff_t(ns) - offset_r; ++i, ++j) {
 					size_t io = BC::index_of(i, nd);
 					if ((io != nd) && (io != i)) {
 						for (size_t k = 0; k < m; ++k)
@@ -476,18 +476,18 @@ namespace wavelets {
 					}
 				}
 
-				for (ptrdiff_t i = 0; i < n_front_r; ++i)
+				for (ptrdiff_t i = 0; i < ptrdiff_t(n_front_r); ++i)
 					for (size_t k = 0; k < m; ++k)
 						d[i * stride_d + k] -= lifter_r::template bc_apply<ZeroBoundary>(s, i, ns, stride_s, k);
 				for (size_t i = n_front_r; i < nd - n_back_r; ++i)
 					for (size_t k = 0; k < m; ++k)
 						d[i * stride_d + k] -= lifter_r::apply(s, i, stride_s, k);
-				for (ptrdiff_t i = nd - n_back_r; i < nd; ++i)
+				for (ptrdiff_t i = nd - n_back_r; i < ptrdiff_t(nd); ++i)
 					for (size_t k = 0; k < m; ++k)
 						d[i * stride_d + k] -= lifter_r::template bc_apply<ZeroBoundary>(s, i, ns, stride_s, k);
 
 
-				for (ptrdiff_t i = nd, j = nd + offset_r; i < ns - offset_r; ++i, ++j) {
+				for (ptrdiff_t i = nd, j = nd + offset_r; i < ptrdiff_t(ns) - offset_r; ++i, ++j) {
 					size_t io = BC::index_of(i, nd);
 					if ((io != nd) && (io != i)) {
 						for (size_t k = 0; k < m; ++k)
@@ -2307,11 +2307,23 @@ namespace wavelets {
 			case Wavelet::Daubechies6:
 				lwt_bc<Daubechies6<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
 				break;
+			case Wavelet::Daubechies7:
+				lwt_bc<Daubechies7<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+				break;
+			case Wavelet::Daubechies8:
+				lwt_bc<Daubechies8<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+				break;
 			case Wavelet::BiorSpline3_1:
 				lwt_bc<BiorSpline3_1<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
 				break;
 			case Wavelet::BiorSpline4_2:
 				lwt_bc<BiorSpline4_2<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+				break;
+			case Wavelet::BiorSpline6_2:
+				lwt_bc<BiorSpline6_2<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+				break;
+			case Wavelet::BiorSpline2_4:
+				lwt_bc<BiorSpline2_4<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
 				break;
 			case Wavelet::CDF5_3:
 				lwt_bc<CDF5_3<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
@@ -2379,6 +2391,7 @@ namespace wavelets {
 		) {
 
 			switch (wvlt) {
+			// Daubechies Wavelets
 			case Wavelet::Daubechies1:
 				lwt_bc<Daubechies1<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
 				break;
@@ -2397,11 +2410,24 @@ namespace wavelets {
 			case Wavelet::Daubechies6:
 				lwt_bc<Daubechies6<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
 				break;
+			case Wavelet::Daubechies7:
+				lwt_bc<Daubechies7<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+				break;
+			case Wavelet::Daubechies8:
+				lwt_bc<Daubechies8<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+				break;
+			// Bior Wavelets
 			case Wavelet::BiorSpline3_1:
 				lwt_bc<BiorSpline3_1<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
 				break;
 			case Wavelet::BiorSpline4_2:
 				lwt_bc<BiorSpline4_2<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+				break;
+			case Wavelet::BiorSpline6_2:
+				lwt_bc<BiorSpline6_2<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+				break;
+			case Wavelet::BiorSpline2_4:
+				lwt_bc<BiorSpline2_4<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
 				break;
 			case Wavelet::CDF5_3:
 				lwt_bc<CDF5_3<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
@@ -2420,8 +2446,12 @@ namespace wavelets {
 			case Wavelet::Daubechies4: return max_level<Daubechies4<float>>(n);
 			case Wavelet::Daubechies5: return max_level<Daubechies5<float>>(n);
 			case Wavelet::Daubechies6: return max_level<Daubechies6<float>>(n);
+			case Wavelet::Daubechies7: return max_level<Daubechies7<float>>(n);
+			case Wavelet::Daubechies8: return max_level<Daubechies8<float>>(n);
 			case Wavelet::BiorSpline3_1: return max_level<BiorSpline3_1<float>>(n);
 			case Wavelet::BiorSpline4_2: return max_level<BiorSpline4_2<float>>(n);
+			case Wavelet::BiorSpline6_2: return max_level<BiorSpline6_2<float>>(n);
+			case Wavelet::BiorSpline2_4: return max_level<BiorSpline2_4<float>>(n);
 			case Wavelet::CDF5_3: return max_level<CDF5_3<float>>(n);
 			case Wavelet::CDF9_7: return max_level<CDF9_7<float>>(n);
 			}
