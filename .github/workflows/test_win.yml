@@ -54,7 +54,7 @@ jobs:
       - name: Configure Build
         run: |
             $env:LDFLAGS="/LIBPATH:$env:CONDA_PREFIX\Library\lib"
-            meson setup builddir -Dbuild_tests=True cpp_link_args
+            meson setup builddir -Dbuild_tests=True
         env:
           CXX: icx-cl
 
