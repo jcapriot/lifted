@@ -263,13 +263,13 @@ namespace wavelets {
 		struct update_d {
 			constexpr static size_t n_vals = sizeof...(vals);
 
-			constexpr static ptrdiff_t max_offset = n_vals - 1 + offset;
+			constexpr static ptrdiff_t max_offset = ptrdiff_t(n_vals) - 1 + offset;
 			constexpr static size_t n_front = (offset < 0) ? -offset : 0;
 			constexpr static size_t n_back = (max_offset < 0) ? 0 : max_offset;
 
 			constexpr static ptrdiff_t offset_r = -max_offset;
 
-			constexpr static ptrdiff_t max_offset_r = n_vals - 1 + offset_r;
+			constexpr static ptrdiff_t max_offset_r = ptrdiff_t(n_vals) - 1 + offset_r;
 			constexpr static size_t n_front_r = (offset_r < 0) ? -offset_r : 0;
 			constexpr static size_t n_back_r = (max_offset_r < 0) ? 0 : max_offset_r;
 
@@ -381,13 +381,13 @@ namespace wavelets {
 		struct update_s {
 			constexpr static size_t n_vals = sizeof...(vals);
 
-			constexpr static ptrdiff_t max_offset = n_vals - 1 + offset;
+			constexpr static ptrdiff_t max_offset = ptrdiff_t(n_vals) - 1 + offset;
 			constexpr static size_t n_front = (offset < 0) ? -offset : 0;
 			constexpr static size_t n_back = (max_offset < 0) ? 0 : max_offset;
 
 			constexpr static ptrdiff_t offset_r = -max_offset;
 
-			constexpr static ptrdiff_t max_offset_r = n_vals - 1 + offset_r;
+			constexpr static ptrdiff_t max_offset_r = ptrdiff_t(n_vals) - 1 + offset_r;
 			constexpr static size_t n_front_r = (offset_r < 0) ? -offset_r : 0;
 			constexpr static size_t n_back_r = (max_offset_r < 0) ? 0 : max_offset_r;
 
