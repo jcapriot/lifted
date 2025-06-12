@@ -155,6 +155,7 @@ jobs:
         run: meson setup builddir -Dbuild_tests=True
         env:
           CXX: icx
+          LDFLAGS: -lpthread
 
       - name: Build
         run: meson compile -C builddir -v
