@@ -124,7 +124,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install GNU compiler
+      - name: Install LLVM compiler
         run: sudo apt install clang-18
 
       - name: Setup python
@@ -139,6 +139,47 @@ jobs:
         run: meson setup builddir -Dbuild_tests=True
         env:
           CXX: clang++-18
+
+      - name: Build
+        run: meson compile -C builddir
+
+      - name: Test
+        run: meson test -C builddir -vv
+
+  INTEL_UBUNTU:
+    name: Intel on ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Add Intel APT index
+        run: |
+            sudo apt install -y gpg-agent wget
+            wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+            echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+            sudo apt update
+
+
+      - name: Install Intel compiler
+        run: |
+            sudo apt install intel-oneapi-compiler-dpcpp-cpp
+            icpx --version
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.13'
+
+      - name: Install build requirements
+        run: python -m pip install meson ninja
+
+      - name: Configure Build
+        run: meson setup builddir -Dbuild_tests=True
+        env:
+          CXX: icpx
 
       - name: Build
         run: meson compile -C builddir
