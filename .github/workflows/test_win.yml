@@ -25,9 +25,12 @@ jobs:
         run: python -m pip install meson ninja
 
       - name: Configure Build
-        run: meson setup build -Dbuild_tests=True
+        run: meson setup builddir -Dbuild_tests=True -Dvsenv=True
 
-      - name: Build and Run tests
-        run: meson test -C build
+      - name: Build
+        run: meson compile -C builddir
+
+      - name: Test
+        run: meson test -C builddir
            
         
