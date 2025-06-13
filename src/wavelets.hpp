@@ -2469,7 +2469,7 @@ namespace wavelets {
 #elif (defined(__VSX__))
 	const static size_t vector_byte_length = 16;
 #elif (defined(__ARM_NEON__) || defined(__ARM_NEON))
-    const static size_t vector_byyte_length = 16;
+    const static size_t vector_byte_length = 16;
 #endif
 #else
     const static bool vector_support = false;
