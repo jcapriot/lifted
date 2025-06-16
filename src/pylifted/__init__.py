@@ -1,1 +1,7 @@
-from ._wavelets import lift_transform, get_vectorization_info
+from ._wavelets import (
+    lwt,
+    ilwt,
+    lwt_adjoint,
+    ilwt_adjoint,
+    get_vectorization_info
+)
