@@ -67,7 +67,7 @@ TEST_P(TestShapesAndAxes, ValidateDWTSingleLevel) {
         ain = aout;
     }
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, levels, input.data(), output.data());
+    ForwardTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, input.data(), output.data());
 
     for (size_t i = 0; i < sz; ++i) {
         EXPECT_EQ(output[i], output_ref[i]);
@@ -142,7 +142,7 @@ TEST_P(TestShapesAndAxes, ValidateDWTSeperableMultipleLevel) {
         ain = aout;
     }
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, levels, input.data(), output.data());
+    ForwardTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, input.data(), output.data());
 
     for (size_t i = 0; i < sz; ++i) {
         EXPECT_EQ(output[i], output_ref[i]);
@@ -204,7 +204,7 @@ TEST_P(TestShapesAndAxes, ValidateDWTMultipleLevel) {
         for (auto ax : axes) shape_[ax] = shape_[ax] - shape_[ax] / 2;
     }
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, level, input.data(), output.data());
+    ForwardTransform<WVLT, BC>::apply(shape, strides, strides, axes, level, input.data(), output.data());
 
     for (size_t i = 0; i < sz; ++i) {
         EXPECT_EQ(output[i], output_ref[i]);
@@ -237,8 +237,8 @@ TEST_P(TestShapesAndAxes, ValidateFwdInvDWTSingleLevel) {
     }
     fill_sin(x_0, -1000.0, 1001.0);
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
-    idwt<WVLT, BC>(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
+    ForwardTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
+    InverseTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
 
     prec rtol = 1E-7;
     prec atol = 0.0;
@@ -275,8 +275,8 @@ TEST_P(TestShapesAndAxes, ValidateFwdInvDWTSeperableMultipleLevel) {
     }
     fill_sin(x_0, -1000.0, 1001.0);
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
-    idwt<WVLT, BC>(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
+    ForwardTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
+    InverseTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
 
     prec rtol = 1E-7;
     prec atol = 0.0;
@@ -313,8 +313,8 @@ TEST_P(TestShapesAndAxes, ValidateFwdInvDWTMultipleLevel) {
     }
     fill_sin(x_0, -1000.0, 1001.0);
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, level, x_0.data(), x_w.data());
-    idwt<WVLT, BC>(shape, strides, strides, axes, level, x_w.data(), x_1.data());
+    ForwardTransform<WVLT, BC>::apply(shape, strides, strides, axes, level, x_0.data(), x_w.data());
+    InverseTransform<WVLT, BC>::apply(shape, strides, strides, axes, level, x_w.data(), x_1.data());
 
     prec rtol = 1E-7;
     prec atol = 0.0;
@@ -351,8 +351,8 @@ TEST_P(TestShapesAndAxes, ValidateFwdInvDWTAdjointSingleLevel) {
     }
     fill_sin(x_0, -1000.0, 1001.0);
 
-    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
-    idwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
+    ForwardAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
+    InverseAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
 
     prec rtol = 1E-7;
     prec atol = 0.0;
@@ -389,8 +389,8 @@ TEST_P(TestShapesAndAxes, ValidateFwdInvDWTAdjointSeperableMultipleLevel) {
     }
     fill_sin(x_0, -1000.0, 1001.0);
 
-    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
-    idwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
+    ForwardAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, x_0.data(), x_w.data());
+    InverseAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, x_w.data(), x_1.data());
 
     prec rtol = 1E-7;
     prec atol = 0.0;
@@ -427,8 +427,8 @@ TEST_P(TestShapesAndAxes, ValidateFwdInvDWTAdjointMultipleLevel) {
     }
     fill_sin(x_0, -1000.0, 1001.0);
 
-    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, level, x_0.data(), x_w.data());
-    idwt_adjoint<WVLT, BC>(shape, strides, strides, axes, level, x_w.data(), x_1.data());
+    ForwardAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, level, x_0.data(), x_w.data());
+    InverseAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, level, x_w.data(), x_1.data());
 
     prec rtol = 1E-7;
     prec atol = 0.0;
@@ -467,8 +467,8 @@ TEST_P(TestShapesAndAxes, ValidateDWTAdjointSingleLevel) {
     fill_sin(u, -11024.0, 1123.321);
     fill_sin(v, -5698234.42, 2615.53);
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, levels, u.data(), f_u.data());
-    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, v.data(), ft_v.data());
+    ForwardTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, u.data(), f_u.data());
+    ForwardAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, v.data(), ft_v.data());
 
     prec v1 = std::inner_product(v.begin(), v.end(), f_u.begin(), prec(0));
     prec v2 = std::inner_product(ft_v.begin(), ft_v.end(), u.begin(), prec(0));
@@ -507,8 +507,8 @@ TEST_P(TestShapesAndAxes, ValidateDWTAdjointSeperableMultipleLevel) {
     fill_sin(u, -11024.0, 1123.321);
     fill_sin(v, -5698234.42, 2615.53);
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, levels, u.data(), f_u.data());
-    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, v.data(), ft_v.data());
+    ForwardTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, u.data(), f_u.data());
+    ForwardAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, v.data(), ft_v.data());
 
     prec v1 = std::inner_product(v.begin(), v.end(), f_u.begin(), prec(0));
     prec v2 = std::inner_product(ft_v.begin(), ft_v.end(), u.begin(), prec(0));
@@ -547,8 +547,8 @@ TEST_P(TestShapesAndAxes, ValidateDWTAdjointMultipleLevel) {
     fill_sin(u, -11024.0, 1123.321);
     fill_sin(v, -5698234.42, 2615.53);
 
-    dwt<WVLT, BC>(shape, strides, strides, axes, level, u.data(), f_u.data());
-    dwt_adjoint<WVLT, BC>(shape, strides, strides, axes, level, v.data(), ft_v.data());
+    ForwardTransform<WVLT, BC>::apply(shape, strides, strides, axes, level, u.data(), f_u.data());
+    ForwardAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, level, v.data(), ft_v.data());
 
     prec v1 = std::inner_product(v.begin(), v.end(), f_u.begin(), prec(0));
     prec v2 = std::inner_product(ft_v.begin(), ft_v.end(), u.begin(), prec(0));
@@ -587,8 +587,8 @@ TEST_P(TestShapesAndAxes, ValidateIDWTAdjointSingleLevel) {
     fill_sin(u, -11024.0, 1123.321);
     fill_sin(v, -5698234.42, 2615.53);
 
-    idwt<WVLT, BC>(shape, strides, strides, axes, levels, u.data(), f_u.data());
-    idwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, v.data(), ft_v.data());
+    InverseTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, u.data(), f_u.data());
+    InverseAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, v.data(), ft_v.data());
 
     prec v1 = std::inner_product(v.begin(), v.end(), f_u.begin(), prec(0));
     prec v2 = std::inner_product(ft_v.begin(), ft_v.end(), u.begin(), prec(0));
@@ -627,8 +627,8 @@ TEST_P(TestShapesAndAxes, ValidateIDWTAdjointSeperableMultipleLevel) {
     fill_sin(u, -11024.0, 1123.321);
     fill_sin(v, -5698234.42, 2615.53);
 
-    idwt<WVLT, BC>(shape, strides, strides, axes, levels, u.data(), f_u.data());
-    idwt_adjoint<WVLT, BC>(shape, strides, strides, axes, levels, v.data(), ft_v.data());
+    InverseTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, u.data(), f_u.data());
+    InverseAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, levels, v.data(), ft_v.data());
 
     prec v1 = std::inner_product(v.begin(), v.end(), f_u.begin(), prec(0));
     prec v2 = std::inner_product(ft_v.begin(), ft_v.end(), u.begin(), prec(0));
@@ -667,8 +667,8 @@ TEST_P(TestShapesAndAxes, ValidateIDWTAdjointMultipleLevel) {
     fill_sin(u, -11024.0, 1123.321);
     fill_sin(v, -5698234.42, 2615.53);
 
-    idwt<WVLT, BC>(shape, strides, strides, axes, level, u.data(), f_u.data());
-    idwt_adjoint<WVLT, BC>(shape, strides, strides, axes, level, v.data(), ft_v.data());
+    InverseTransform<WVLT, BC>::apply(shape, strides, strides, axes, level, u.data(), f_u.data());
+    InverseAdjointTransform<WVLT, BC>::apply(shape, strides, strides, axes, level, v.data(), ft_v.data());
 
     prec v1 = std::inner_product(v.begin(), v.end(), f_u.begin(), prec(0));
     prec v2 = std::inner_product(ft_v.begin(), ft_v.end(), u.begin(), prec(0));

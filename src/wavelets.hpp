@@ -1655,79 +1655,6 @@ namespace wavelets {
 			}
 		}
 
-		template<typename WVLT, typename BC, typename T>
-		static void dwt(
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
-			const T* data_in, T* data_out, const size_t n_threads = 1
-		) {
-			using driver = forward_driver<WVLT, BC>;
-			general_nd<driver>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-		}
-
-		template<typename WVLT, typename BC, typename T>
-		static void dwt(
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
-			const T* data_in, T* data_out, const size_t n_threads = 1
-		) {
-			using driver = forward_driver<WVLT, BC>;
-			general_nd<driver>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-		}
-
-		template<typename WVLT, typename BC, typename T>
-		static void dwt_adjoint(
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
-			const T* data_in, T* data_out, const size_t n_threads = 1
-		) {
-			using driver = forward_adjoint_driver<WVLT, BC>;
-			general_nd<driver>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-		}
-
-		template<typename WVLT, typename BC, typename T>
-		static void dwt_adjoint(
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
-			const T* data_in, T* data_out, const size_t n_threads = 1
-		) {
-			using driver = forward_adjoint_driver<WVLT, BC>;
-			general_nd<driver>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-		}
-
-		template<typename WVLT, typename BC, typename T>
-		static void idwt(
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
-			const T* data_in, T* data_out, size_t n_threads = 1
-		) {
-			using driver = inverse_driver<WVLT, BC>;
-			general_nd<driver>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-		}
-
-		template<typename WVLT, typename BC, typename T>
-		static void idwt(
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
-			const T* data_in, T* data_out, size_t n_threads = 1
-		) {
-			using driver = inverse_driver<WVLT, BC>;
-			general_nd<driver>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-		}
-
-		template<typename WVLT, typename BC, typename T>
-		static void idwt_adjoint(
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
-			const T* data_in, T* data_out, size_t n_threads = 1
-		) {
-			using driver = inverse_adjoint_driver<WVLT, BC>;
-			general_nd<driver>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-		}
-
-		template<typename WVLT, typename BC, typename T>
-		static void idwt_adjoint(
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
-			const T* data_in, T* data_out, size_t n_threads = 1
-		) {
-			using driver = inverse_adjoint_driver<WVLT, BC>;
-			general_nd<driver>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-		}
-
-
 		template<typename T> class Daubechies1 {
 			constexpr static T sc = T(1.41421356237309504880168872420969807856967187537694807317668L);
 		public:
@@ -2233,210 +2160,344 @@ namespace wavelets {
 			REFLECT
 		};
 
-		template<typename WVLT, typename BC, typename T>
-		static void lwt_bc_type(
-			const bool forward, const bool adjoint,
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
-			const T* data_in, T* data_out, size_t n_threads = 1
-		) {
-			if (forward) {
-				if (adjoint) {
-					dwt_adjoint<WVLT, BC>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				}
-				else {
-					dwt<WVLT, BC>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				}
-			} else {
-				if (adjoint) {
-					idwt_adjoint<WVLT, BC>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				}
-				else {
-					idwt<WVLT, BC>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				}
-			}
-		}
+		template<typename WVLT, typename BC>
+		struct ForwardTransform {
+			using driver = forward_driver<WVLT, BC>;
 
-		template<typename WVLT, typename T>
-		static void lwt_bc(
-			const BoundaryCondition bc, const bool forward, const bool adjoint,
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+			template<typename T>
+			static void apply(
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+				const T* data_in, T* data_out, const size_t n_threads = 1
+			) {
+				general_nd<driver>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+			}
+
+			template<typename T>
+			static void apply(
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+				const T* data_in, T* data_out, const size_t n_threads = 1
+			) {
+				general_nd<driver>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+			}
+		};
+
+		template<typename WVLT, typename BC>
+		struct ForwardAdjointTransform {
+			using driver = forward_adjoint_driver<WVLT, BC>;
+
+			template<typename T>
+			static void apply(
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+				const T* data_in, T* data_out, const size_t n_threads = 1
+			) {
+				general_nd<driver>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+			}
+
+			template<typename T>
+			static void apply(
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+				const T* data_in, T* data_out, const size_t n_threads = 1
+			) {
+				general_nd<driver>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+			}
+		};
+
+		template<typename WVLT, typename BC>
+		struct InverseTransform {
+			using driver = inverse_driver<WVLT, BC>;
+
+			template<typename T>
+			static void apply(
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+				const T* data_in, T* data_out, const size_t n_threads = 1
+			) {
+				general_nd<driver>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+			}
+
+			template<typename T>
+			static void apply(
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+				const T* data_in, T* data_out, const size_t n_threads = 1
+			) {
+				general_nd<driver>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+			}
+		};
+
+		template<typename WVLT, typename BC>
+		struct InverseAdjointTransform {
+			using driver = inverse_adjoint_driver<WVLT, BC>;
+
+			template<typename T>
+			static void apply(
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+				const T* data_in, T* data_out, const size_t n_threads = 1
+			) {
+				general_nd<driver>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+			}
+
+			template<typename T>
+			static void apply(
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+				const T* data_in, T* data_out, const size_t n_threads = 1
+			) {
+				general_nd<driver>(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+			}
+		};
+
+		template<typename WVLT, template<typename, typename> class OP>
+		struct BCDispatch {
+
+			template<typename T>
+			static void apply(
+				const BoundaryCondition bc,
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+				const T* data_in, T* data_out, size_t n_threads = 1
+			) {
+				switch (bc) {
+				case BoundaryCondition::ZERO:
+					OP<WVLT, ZeroBoundary>::apply(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case BoundaryCondition::PERIODIC:
+					OP<WVLT, PeriodicBoundary>::apply(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case BoundaryCondition::CONSTANT:
+					OP<WVLT, ConstantBoundary>::apply(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case BoundaryCondition::SYMMETRIC:
+					OP<WVLT, SymmetricBoundary>::apply(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case BoundaryCondition::REFLECT:
+					OP<WVLT, ReflectBoundary>::apply(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				}
+			}
+
+			template<typename T>
+			static void apply(
+				const BoundaryCondition bc,
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+				const T* data_in, T* data_out, size_t n_threads = 1
+			) {
+				switch (bc) {
+				case BoundaryCondition::ZERO:
+					OP<WVLT, ZeroBoundary>::apply(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case BoundaryCondition::PERIODIC:
+					OP<WVLT, PeriodicBoundary>::apply(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case BoundaryCondition::CONSTANT:
+					OP<WVLT, ConstantBoundary>::apply(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case BoundaryCondition::SYMMETRIC:
+					OP<WVLT, SymmetricBoundary>::apply(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case BoundaryCondition::REFLECT:
+					OP<WVLT, ReflectBoundary>::apply(shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				}
+			}
+		};
+
+		template<template<typename, typename> class OP>
+		struct WVLTBCDispatch {
+
+			template<typename T>
+			static void apply(
+				const Wavelet wvlt, const BoundaryCondition bc,
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+				const T* data_in, T* data_out, size_t n_threads = 1
+			) {
+				switch (wvlt) {
+					// Daubechies Wavelets
+				case Wavelet::Daubechies1:
+					BCDispatch<Daubechies1<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies2:
+					BCDispatch<Daubechies2<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies3:
+					BCDispatch<Daubechies3<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies4:
+					BCDispatch<Daubechies4<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies5:
+					BCDispatch<Daubechies5<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies6:
+					BCDispatch<Daubechies6<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies7:
+					BCDispatch<Daubechies7<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies8:
+					BCDispatch<Daubechies8<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+					// Bior Wavelets
+				case Wavelet::BiorSpline3_1:
+					BCDispatch<BiorSpline3_1<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::BiorSpline4_2:
+					BCDispatch<BiorSpline4_2<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::BiorSpline6_2:
+					BCDispatch<BiorSpline6_2<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::BiorSpline2_4:
+					BCDispatch<BiorSpline2_4<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::CDF5_3:
+					BCDispatch<CDF5_3<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::CDF9_7:
+					BCDispatch<CDF9_7<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				}
+			}
+
+			template<typename T>
+			static void apply(
+				const Wavelet wvlt, const BoundaryCondition bc,
+				const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+				const T* data_in, T* data_out, size_t n_threads = 1
+			) {
+				switch (wvlt) {
+					// Daubechies Wavelets
+				case Wavelet::Daubechies1:
+					BCDispatch<Daubechies1<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies2:
+					BCDispatch<Daubechies2<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies3:
+					BCDispatch<Daubechies3<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies4:
+					BCDispatch<Daubechies4<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies5:
+					BCDispatch<Daubechies5<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies6:
+					BCDispatch<Daubechies6<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies7:
+					BCDispatch<Daubechies7<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies8:
+					BCDispatch<Daubechies8<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+					// Bior Wavelets
+				case Wavelet::BiorSpline3_1:
+					BCDispatch<BiorSpline3_1<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::BiorSpline4_2:
+					BCDispatch<BiorSpline4_2<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::BiorSpline6_2:
+					BCDispatch<BiorSpline6_2<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::BiorSpline2_4:
+					BCDispatch<BiorSpline2_4<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::CDF5_3:
+					BCDispatch<CDF5_3<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::CDF9_7:
+					BCDispatch<CDF9_7<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				}
+			}
+		};
+
+		template<typename T>
+		static void lwt(
+			const Wavelet wvlt, const BoundaryCondition bc,
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
 			const T* data_in, T* data_out, size_t n_threads = 1
 		) {
-			switch (bc) {
-			case BoundaryCondition::ZERO:
-				lwt_bc_type<WVLT, ZeroBoundary>(forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case BoundaryCondition::PERIODIC:
-				lwt_bc_type<WVLT, PeriodicBoundary>(forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case BoundaryCondition::CONSTANT:
-				lwt_bc_type<WVLT, ConstantBoundary>(forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case BoundaryCondition::SYMMETRIC:
-				lwt_bc_type<WVLT, SymmetricBoundary>(forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case BoundaryCondition::REFLECT:
-				lwt_bc_type<WVLT, ReflectBoundary>(forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			}
+			WVLTBCDispatch<ForwardTransform>::apply(
+				wvlt, bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads
+			);
 		}
 
 		template<typename T>
 		static void lwt(
-			const Wavelet wvlt, const BoundaryCondition bc, const bool forward, const bool adjoint,
+			const Wavelet wvlt, const BoundaryCondition bc,
 			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
 			const T* data_in, T* data_out, size_t n_threads = 1
 		) {
-
-			switch (wvlt) {
-			case Wavelet::Daubechies1:
-				lwt_bc<Daubechies1<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies2:
-				lwt_bc<Daubechies2<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies3:
-				lwt_bc<Daubechies3<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies4:
-				lwt_bc<Daubechies4<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies5:
-				lwt_bc<Daubechies5<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies6:
-				lwt_bc<Daubechies6<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies7:
-				lwt_bc<Daubechies7<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies8:
-				lwt_bc<Daubechies8<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::BiorSpline3_1:
-				lwt_bc<BiorSpline3_1<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::BiorSpline4_2:
-				lwt_bc<BiorSpline4_2<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::BiorSpline6_2:
-				lwt_bc<BiorSpline6_2<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::BiorSpline2_4:
-				lwt_bc<BiorSpline2_4<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::CDF5_3:
-				lwt_bc<CDF5_3<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			case Wavelet::CDF9_7:
-				lwt_bc<CDF9_7<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
-				break;
-			}
-		}
-
-		template<typename WVLT, typename BC, typename T>
-		static void lwt_bc_type(
-			const bool forward, const bool adjoint,
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
-			const T* data_in, T* data_out, size_t n_threads = 1
-		) {
-			if (forward) {
-				if (adjoint) {
-					dwt_adjoint<WVLT, BC>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				}
-				else {
-					dwt<WVLT, BC>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				}
-			}
-			else {
-				if (adjoint) {
-					idwt_adjoint<WVLT, BC>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				}
-				else {
-					idwt<WVLT, BC>(shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				}
-			}
-		}
-
-		template<typename WVLT, typename T>
-		static void lwt_bc(
-			const BoundaryCondition bc, const bool forward, const bool adjoint,
-			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
-			const T* data_in, T* data_out, size_t n_threads = 1
-		) {
-			switch (bc) {
-			case BoundaryCondition::ZERO:
-				lwt_bc_type<WVLT, ZeroBoundary>(forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case BoundaryCondition::PERIODIC:
-				lwt_bc_type<WVLT, PeriodicBoundary>(forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case BoundaryCondition::CONSTANT:
-				lwt_bc_type<WVLT, ConstantBoundary>(forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case BoundaryCondition::SYMMETRIC:
-				lwt_bc_type<WVLT, SymmetricBoundary>(forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case BoundaryCondition::REFLECT:
-				lwt_bc_type<WVLT, ReflectBoundary>(forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			}
+			WVLTBCDispatch<ForwardTransform>::apply(
+				wvlt, bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads
+			);
 		}
 
 		template<typename T>
-		static void lwt(
-			const Wavelet wvlt, const BoundaryCondition bc, const bool forward, const bool adjoint,
+		static void lwt_adjoint(
+			const Wavelet wvlt, const BoundaryCondition bc,
 			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
 			const T* data_in, T* data_out, size_t n_threads = 1
 		) {
-
-			switch (wvlt) {
-			// Daubechies Wavelets
-			case Wavelet::Daubechies1:
-				lwt_bc<Daubechies1<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies2:
-				lwt_bc<Daubechies2<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies3:
-				lwt_bc<Daubechies3<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies4:
-				lwt_bc<Daubechies4<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies5:
-				lwt_bc<Daubechies5<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies6:
-				lwt_bc<Daubechies6<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies7:
-				lwt_bc<Daubechies7<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::Daubechies8:
-				lwt_bc<Daubechies8<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			// Bior Wavelets
-			case Wavelet::BiorSpline3_1:
-				lwt_bc<BiorSpline3_1<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::BiorSpline4_2:
-				lwt_bc<BiorSpline4_2<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::BiorSpline6_2:
-				lwt_bc<BiorSpline6_2<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::BiorSpline2_4:
-				lwt_bc<BiorSpline2_4<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::CDF5_3:
-				lwt_bc<CDF5_3<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			case Wavelet::CDF9_7:
-				lwt_bc<CDF9_7<T>>(bc, forward, adjoint, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
-				break;
-			}
+			WVLTBCDispatch<ForwardAdjointTransform>::apply(
+				wvlt, bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads
+			);
 		}
+
+		template<typename T>
+		static void lwt_adjoint(
+			const Wavelet wvlt, const BoundaryCondition bc,
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+			const T* data_in, T* data_out, size_t n_threads = 1
+		) {
+			WVLTBCDispatch<ForwardAdjointTransform>::apply(
+				wvlt, bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads
+			);
+		}
+
+		template<typename T>
+		static void ilwt(
+			const Wavelet wvlt, const BoundaryCondition bc,
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+			const T* data_in, T* data_out, size_t n_threads = 1
+		) {
+			WVLTBCDispatch<InverseTransform>::apply(
+				wvlt, bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads
+			);
+		}
+
+		template<typename T>
+		static void ilwt(
+			const Wavelet wvlt, const BoundaryCondition bc,
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+			const T* data_in, T* data_out, size_t n_threads = 1
+		) {
+			WVLTBCDispatch<InverseTransform>::apply(
+				wvlt, bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads
+			);
+		}
+
+		template<typename T>
+		static void ilwt_adjoint(
+			const Wavelet wvlt, const BoundaryCondition bc,
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+			const T* data_in, T* data_out, size_t n_threads = 1
+		) {
+			WVLTBCDispatch<InverseAdjointTransform>::apply(
+				wvlt, bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads
+			);
+		}
+
+		template<typename T>
+		static void ilwt_adjoint(
+			const Wavelet wvlt, const BoundaryCondition bc,
+			const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+			const T* data_in, T* data_out, size_t n_threads = 1
+		) {
+			WVLTBCDispatch<InverseAdjointTransform>::apply(
+				wvlt, bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads
+			);
+		}
+
 
 		static inline size_t max_level(const Wavelet wvlt, size_t n) {
 			switch (wvlt) {
@@ -2518,12 +2579,16 @@ namespace wavelets {
 
 	// Main transform functions
 	using detail::max_level;
-	using detail::dwt;
-	using detail::dwt_adjoint;
-	using detail::idwt;
-	using detail::idwt_adjoint;
+
+	using detail::ForwardTransform;
+	using detail::InverseTransform;
+	using detail::ForwardAdjointTransform;
+	using detail::InverseAdjointTransform;
 
 	using detail::lwt;
+	using detail::lwt_adjoint;
+	using detail::ilwt;
+	using detail::ilwt_adjoint;
 }
 
 #endif

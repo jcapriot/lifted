@@ -34,45 +34,116 @@ cdef extern from "wavelets.hpp" namespace "wavelets":
         SYMMETRIC
         REFLECT
 
-    void lwt_cpp "lwt" [T](
-        Wavelet wvlt, BoundaryCondition bc, bool forward, bool adjoint,
-        size_v& shape, stride_v& stride_in, stride_v& stride_out, size_v& axes, size_t level,
-        const T* data_in, T* data_out, size_t n_threads
-    )
-
-    void lwt_sep_cpp "lwt" [T](
-        Wavelet wvlt, BoundaryCondition bc, bool forward, bool adjoint,
-        size_v& shape, stride_v& stride_in, stride_v& stride_out, size_v& axes, size_v& levels,
-        const T* data_in, T* data_out, size_t n_threads
-    )
-
     size_t max_level(Wavelet wvlt, size_t n)
 
+cdef extern from "instantiations.hpp" namespace "lifted":
+
+    # forward
+    void lwt_float(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+        const float* data_in, float* data_out, size_t n_threads
+    )
+
+    void lwt_double(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+        const double* data_in, double* data_out, size_t n_threads
+    )
+
+    void lwt_sep_float(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+        const float* data_in, float* data_out, size_t n_threads
+    )
+
+    void lwt_sep_double(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+        const double* data_in, double* data_out, size_t n_threads
+    );
+
+    # inverse
+    void ilwt_float(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+        const float* data_in, float* data_out, size_t n_threads
+    )
+
+    void ilwt_double(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+        const double* data_in, double* data_out, size_t n_threads
+    )
+
+    void ilwt_sep_float(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+        const float* data_in, float* data_out, size_t n_threads
+    )
+
+    void ilwt_sep_double(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+        const double* data_in, double* data_out, size_t n_threads
+    )
+
+    # forward adjoint
+    void lwt_adjoint_float(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+        const float* data_in, float* data_out, size_t n_threads
+    )
+
+    void lwt_adjoint_double(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+        const double* data_in, double* data_out, size_t n_threads
+    )
+
+    void lwt_sep_adjoint_float(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+        const float* data_in, float* data_out, size_t n_threads
+    )
+
+    void lwt_sep_adjoint_double(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+        const double* data_in, double* data_out, size_t n_threads
+    )
+
+    # inverse adjoint
+    void ilwt_adjoint_float(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+        const float* data_in, float* data_out, size_t n_threads
+    )
+
+    void ilwt_adjoint_double(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_t level,
+        const double* data_in, double* data_out, size_t n_threads
+    )
+
+    void ilwt_sep_adjoint_float(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+        const float* data_in, float* data_out, size_t n_threads
+    )
+
+    void ilwt_sep_adjoint_double(
+        const Wavelet wvlt, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out, const size_v& axes, const size_v& levels,
+        const double* data_in, double* data_out, size_t n_threads
+    )
 
 def get_vectorization_info():
     return {"vectorized":vector_support, "vector length":vector_byte_length}
 
-def lift_transform(
-        cnp.ndarray x,
-        str wavelet='db4',
-        str mode='zero',
-        bool forward=True,
-        bool adjoint=False,
-        axes=None,
-        level=1,
-        size_t n_threads = 1,
-):
-    cdef:
-        size_t ndim = x.ndim
-        size_v shape = size_v(ndim)
-        stride_v stride_in = stride_v(ndim)
-        size_t elem_size = x.itemsize
-        Wavelet wvlt
-        BoundaryCondition bc
+cdef Wavelet get_wvlt(str wavelet):
 
-        size_v axes_
-        size_t level_
-        size_v levels_
+    cdef Wavelet wvlt
 
     if wavelet == 'db1' or wavelet == 'haar':
         wvlt = Wavelet.Daubechies1
@@ -97,6 +168,12 @@ def lift_transform(
     else:
         raise ValueError(f"Unknown wavelet {wavelet}")
 
+    return wvlt
+
+cdef BoundaryCondition get_bc(str mode):
+
+    cdef BoundaryCondition bc
+
     if mode == 'zero':
         bc = BoundaryCondition.ZERO
     elif mode == 'periodic':
@@ -110,6 +187,9 @@ def lift_transform(
     else:
         raise ValueError(f"Unknown mode {mode}")
 
+    return bc
+
+cdef size_v get_axes(axes, ndim):
     if axes is not None:
         try:
             axes_ = axes
@@ -120,6 +200,12 @@ def lift_transform(
                 raise TypeError("Axes must be a iterable or single number.")
     else:
         axes_ = np.arange(ndim)
+    return axes_
+
+cdef (size_t, size_v) get_level(level, size_v axes):
+    cdef:
+        size_t level_
+        size_v levels_
 
     try:
         level_ = level
@@ -128,8 +214,36 @@ def lift_transform(
             levels_ = level
         except TypeError:
             raise TypeError("Level must be a single number, or a list of numbers")
-        if levels_.size() > 0 and levels_.size() != axes_.size():
+        if levels_.size() > 0 and levels_.size() != axes.size():
             raise TypeError("levels must be the same length as axes")
+
+    return level_, levels_
+
+
+def lwt(
+        cnp.ndarray x,
+        str wavelet='db4',
+        str mode='zero',
+        axes=None,
+        level=1,
+        size_t n_threads = 1,
+):
+    cdef:
+        size_t ndim = x.ndim
+        size_v shape = size_v(ndim)
+        stride_v stride_in = stride_v(ndim)
+        size_t elem_size = x.itemsize
+        Wavelet wvlt
+        BoundaryCondition bc
+
+        size_v axes_
+        size_t level_
+        size_v levels_
+
+    wvlt = get_wvlt(wavelet)
+    bc = get_bc(mode)
+    axes_ = get_axes(axes, ndim)
+    level_, levels_ = get_level(level, axes_)
 
     cdef:
         cnp.ndarray out = np.empty_like(x)
@@ -146,13 +260,170 @@ def lift_transform(
 
     if levels_.size() == 0:
         if x.dtype == np.float32:
-            lwt_cpp[float](wvlt, bc, forward, adjoint, shape, stride_in, stride_out, axes_, level_, <const float*> data_in, <float*> data_out, n_threads)
+            lwt_float(wvlt, bc, shape, stride_in, stride_out, axes_, level_, <const float*> data_in, <float*> data_out, n_threads)
         elif x.dtype == np.float64:
-            lwt_cpp[double](wvlt, bc, forward, adjoint, shape, stride_in, stride_out, axes_, level_, <const double*> data_in, <double*> data_out, n_threads)
+            lwt_double(wvlt, bc, shape, stride_in, stride_out, axes_, level_, <const double*> data_in, <double*> data_out, n_threads)
     else:
         if x.dtype == np.float32:
-            lwt_sep_cpp[float](wvlt, bc, forward, adjoint, shape, stride_in, stride_out, axes_, levels_, <const float*> data_in, <float*> data_out, n_threads)
+            lwt_sep_float(wvlt, bc, shape, stride_in, stride_out, axes_, levels_, <const float*> data_in, <float*> data_out, n_threads)
         elif x.dtype == np.float64:
-            lwt_sep_cpp[double](wvlt, bc, forward, adjoint, shape, stride_in, stride_out, axes_, levels_, <const double*> data_in, <double*> data_out, n_threads)
+            lwt_sep_double(wvlt, bc, shape, stride_in, stride_out, axes_, levels_, <const double*> data_in, <double*> data_out, n_threads)
+
+    return out
+
+
+def ilwt(
+        cnp.ndarray x,
+        str wavelet='db4',
+        str mode='zero',
+        axes=None,
+        level=1,
+        size_t n_threads = 1,
+):
+    cdef:
+        size_t ndim = x.ndim
+        size_v shape = size_v(ndim)
+        stride_v stride_in = stride_v(ndim)
+        size_t elem_size = x.itemsize
+        Wavelet wvlt
+        BoundaryCondition bc
+
+        size_v axes_
+        size_t level_
+        size_v levels_
+
+    wvlt = get_wvlt(wavelet)
+    bc = get_bc(mode)
+    axes_ = get_axes(axes, ndim)
+    level_, levels_ = get_level(level, axes_)
+
+    cdef:
+        cnp.ndarray out = np.empty_like(x)
+        stride_v stride_out = stride_v(ndim)
+
+
+    for i in range(ndim):
+        shape[i] = x.shape[i]
+        stride_in[i] = x.strides[i] // elem_size
+        stride_out[i] = out.strides[i] // elem_size
+
+    cdef const void* data_in = cnp.PyArray_DATA(x)
+    cdef void* data_out = cnp.PyArray_DATA(out)
+
+    if levels_.size() == 0:
+        if x.dtype == np.float32:
+            ilwt_float(wvlt, bc, shape, stride_in, stride_out, axes_, level_, <const float*> data_in, <float*> data_out, n_threads)
+        elif x.dtype == np.float64:
+            ilwt_double(wvlt, bc, shape, stride_in, stride_out, axes_, level_, <const double*> data_in, <double*> data_out, n_threads)
+    else:
+        if x.dtype == np.float32:
+            ilwt_sep_float(wvlt, bc, shape, stride_in, stride_out, axes_, levels_, <const float*> data_in, <float*> data_out, n_threads)
+        elif x.dtype == np.float64:
+            ilwt_sep_double(wvlt, bc, shape, stride_in, stride_out, axes_, levels_, <const double*> data_in, <double*> data_out, n_threads)
+
+    return out
+
+
+
+def lwt_adjoint(
+        cnp.ndarray x,
+        str wavelet='db4',
+        str mode='zero',
+        axes=None,
+        level=1,
+        size_t n_threads = 1,
+):
+    cdef:
+        size_t ndim = x.ndim
+        size_v shape = size_v(ndim)
+        stride_v stride_in = stride_v(ndim)
+        size_t elem_size = x.itemsize
+        Wavelet wvlt
+        BoundaryCondition bc
+
+        size_v axes_
+        size_t level_
+        size_v levels_
+
+    wvlt = get_wvlt(wavelet)
+    bc = get_bc(mode)
+    axes_ = get_axes(axes, ndim)
+    level_, levels_ = get_level(level, axes_)
+
+    cdef:
+        cnp.ndarray out = np.empty_like(x)
+        stride_v stride_out = stride_v(ndim)
+
+
+    for i in range(ndim):
+        shape[i] = x.shape[i]
+        stride_in[i] = x.strides[i] // elem_size
+        stride_out[i] = out.strides[i] // elem_size
+
+    cdef const void* data_in = cnp.PyArray_DATA(x)
+    cdef void* data_out = cnp.PyArray_DATA(out)
+
+    if levels_.size() == 0:
+        if x.dtype == np.float32:
+            lwt_adjoint_float(wvlt, bc, shape, stride_in, stride_out, axes_, level_, <const float*> data_in, <float*> data_out, n_threads)
+        elif x.dtype == np.float64:
+            lwt_adjoint_double(wvlt, bc, shape, stride_in, stride_out, axes_, level_, <const double*> data_in, <double*> data_out, n_threads)
+    else:
+        if x.dtype == np.float32:
+            lwt_sep_adjoint_float(wvlt, bc, shape, stride_in, stride_out, axes_, levels_, <const float*> data_in, <float*> data_out, n_threads)
+        elif x.dtype == np.float64:
+            lwt_sep_adjoint_double(wvlt, bc, shape, stride_in, stride_out, axes_, levels_, <const double*> data_in, <double*> data_out, n_threads)
+
+    return out
+
+
+def ilwt_adjoint(
+        cnp.ndarray x,
+        str wavelet='db4',
+        str mode='zero',
+        axes=None,
+        level=1,
+        size_t n_threads = 1,
+):
+    cdef:
+        size_t ndim = x.ndim
+        size_v shape = size_v(ndim)
+        stride_v stride_in = stride_v(ndim)
+        size_t elem_size = x.itemsize
+        Wavelet wvlt
+        BoundaryCondition bc
+
+        size_v axes_
+        size_t level_
+        size_v levels_
+
+    wvlt = get_wvlt(wavelet)
+    bc = get_bc(mode)
+    axes_ = get_axes(axes, ndim)
+    level_, levels_ = get_level(level, axes_)
+
+    cdef:
+        cnp.ndarray out = np.empty_like(x)
+        stride_v stride_out = stride_v(ndim)
+
+
+    for i in range(ndim):
+        shape[i] = x.shape[i]
+        stride_in[i] = x.strides[i] // elem_size
+        stride_out[i] = out.strides[i] // elem_size
+
+    cdef const void* data_in = cnp.PyArray_DATA(x)
+    cdef void* data_out = cnp.PyArray_DATA(out)
+
+    if levels_.size() == 0:
+        if x.dtype == np.float32:
+            ilwt_adjoint_float(wvlt, bc, shape, stride_in, stride_out, axes_, level_, <const float*> data_in, <float*> data_out, n_threads)
+        elif x.dtype == np.float64:
+            ilwt_adjoint_double(wvlt, bc, shape, stride_in, stride_out, axes_, level_, <const double*> data_in, <double*> data_out, n_threads)
+    else:
+        if x.dtype == np.float32:
+            ilwt_sep_adjoint_float(wvlt, bc, shape, stride_in, stride_out, axes_, levels_, <const float*> data_in, <float*> data_out, n_threads)
+        elif x.dtype == np.float64:
+            ilwt_sep_adjoint_double(wvlt, bc, shape, stride_in, stride_out, axes_, levels_, <const double*> data_in, <double*> data_out, n_threads)
 
     return out
