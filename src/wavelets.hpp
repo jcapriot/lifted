@@ -1917,6 +1917,116 @@ namespace wavelets {
 			const static size_t width = 16;
 		};
 
+		template<typename T> class Daubechies9 {
+		private:
+			constexpr static T s1_p0 = T(6.40356667029530508760080808783489133464036532617193668200642L);
+
+			constexpr static T s2_m0 = T(-0.152445307138113158125515923369521189954909195320469555091745L);
+			constexpr static T s2_m1 = T(0.0478620457576149696142136339183134192664759465250407879952019L);
+
+			constexpr static T s3_p1 = T(-16.7495289773888798826988564047533244498790443964285935409250L);
+			constexpr static T s3_p2 = T(8.81374755622085106660660863038249265306851411409730451179401L);
+
+			constexpr static T s4_m2 = T(-0.0599208900033806032126553368487307560798208913547861697203664L);
+			constexpr static T s4_m3 = T(0.0340347707916009652867818067005911583675728508345200913918348L);
+
+			constexpr static T s5_p3 = T(-7.79465596858466751790439766158850497420595357628693657112631L);
+			constexpr static T s5_p4 = T(4.16556856168973137548378360164009504192377781136783738852484L);
+
+			constexpr static T s6_m4 = T(-0.0224419008121378002481343456879309753491248147469986492112145L);
+			constexpr static T s6_m5 = T(0.0101058807409283297084867372477325233905693061878794566228052L);
+
+			constexpr static T s7_p5 = T(-2.02686517288325962820838159403507719850692398840316366775084L);
+			constexpr static T s7_p6 = T(0.680385404820989371520060130779157801338964153839808884599304L);
+
+			constexpr static T s8_m6 = T(-0.00345517675942357584563854529369350464317538313241706164777921L);
+			constexpr static T s8_m7 = T(0.000737614555567870951119489872174219864600074362045135172869561L);
+
+			constexpr static T s9_p7 = T(-0.145575980707287404465639734807644548395600047373340146812474L);
+			constexpr static T s9_p8 = T(0.0145160493659163017396796133362259414298078142573013650468794L);
+
+			constexpr static T s10_m8 = T(-0.000073558753801024382174422512593349405711068832718470204911L);
+
+			constexpr static T sc = T(0.266806475394164811023784074087480714665703180413524153545256L);
+
+		public:
+
+			using steps = std::tuple<
+				update_s< 0, s1_p0>,
+				update_d<-1, s2_m1, s2_m0>,
+				update_s< 1, s3_p1, s3_p2>,
+				update_d<-3, s4_m3, s4_m2>,
+				update_s< 3, s5_p3, s5_p4>,
+				update_d<-5, s6_m5, s6_m4>,
+				update_s< 5, s7_p5, s7_p6>,
+				update_d<-7, s8_m7, s8_m6>,
+				update_s< 7, s9_p7, s9_p8>,
+				update_d<-8, s10_m8>,
+				scale<sc>
+			>;
+			constexpr static size_t n_steps = std::tuple_size<steps>::value;
+
+			using type = T;
+			const static size_t width = 18;
+		};
+
+		template<typename T> class Daubechies10 {
+		private:
+			constexpr static T s1_p0 = T(-7.05573271641722425372287287671537054274962482939774393309597L);
+
+			constexpr static T s2_p0 = T(0.138937875273882486867801529794954198889605368487685062499916L);
+			constexpr static T s2_p1 = T(-0.0440723855473913159199751979923158273798120987048451923439931L);
+
+			constexpr static T s3_m1 = T(18.9141327490851728118176967423708811816959438636030989932862L);
+			constexpr static T s3_m2 = T(-10.1944019324491108447120691883139389311502922162321182217969L);
+
+			constexpr static T s4_p2 = T(0.0581400886463108620418714676575886465057572425807448620563261L);
+			constexpr static T s4_p3 = T(-0.0345692907775274607658344294544977358985093127259602337375023L);
+
+			constexpr static T s5_m3 = T(9.82667061849089314269898456882699657839357508456034855942949L);
+			constexpr static T s5_m4 = T(-5.70138711246923678994802131608360234141050792847673535020183L);
+
+			constexpr static T s6_p4 = T(0.0258915667905536217737090435506775540986604850095995114020343L);
+			constexpr static T s6_p5 = T(-0.0134214601881666825322224865563089256723608595115204041422517L);
+
+			constexpr static T s7_m5 = T(3.31309217077838642695523164256389983851609417600879502794343L);
+			constexpr static T s7_m6 = T(-1.39809421892900296812835643251929202203521241237059776271413L);
+
+			constexpr static T s8_p6 = T(0.00587858298639691456648277376962090120201222076185998953606526L);
+			constexpr static T s8_p7 = T(-0.00181242379712518927320452687498457116493703409472903720690277L);
+
+			constexpr static T s9_m7 = T(0.434275883081245282445872075043694638789242093593484235654802L);
+			constexpr static T s9_m8 = T(-0.0845508291568382642128739817221491217957002914094375371425917L);
+
+			constexpr static T s10_p8 = T(0.000353135120384141769320697765492599497299036748377472493001024L);
+			constexpr static T s10_p9 = T(-0.0000321412109048260097331298099101743753319602611038821674298915L);
+
+			constexpr static T s11_m9 = T(0.0076957695402440469213874787289877569218407678080231515098L);
+
+			constexpr static T sc = T(3.93366550987980032644543137065956466690284578093101997017002L);
+
+		public:
+
+			using steps = std::tuple<
+				update_d< 0, s1_p0>,
+				update_s< 0, s2_p0, s2_p1>,
+				update_d<-2, s3_m2, s3_m1>,
+				update_s< 2, s4_p2, s4_p3>,
+				update_d<-4, s5_m4, s5_m3>,
+				update_s< 4, s6_p4, s6_p5>,
+				update_d<-6, s7_m6, s7_m5>,
+				update_s< 6, s8_p6, s8_p7>,
+				update_d<-8, s9_m8, s9_m7>,
+				update_s< 8, s10_p8, s10_p9>,
+				update_d<-9, s11_m9>,
+				scale<sc>
+			>;
+			constexpr static size_t n_steps = std::tuple_size<steps>::value;
+
+			using type = T;
+			const static size_t width = 20;
+		};
+
 		template<typename T> class BiorSpline3_1 {
 			constexpr static T s1_m1 = T(-0.333333333333333333333333333333333333333333333333333333333333L);
 			constexpr static T s2_p0 = T(-1.125L);
@@ -2144,6 +2254,8 @@ namespace wavelets {
 			Daubechies6,
 			Daubechies7,
 			Daubechies8,
+			Daubechies9,
+			Daubechies10,
 			BiorSpline3_1,
 			BiorSpline4_2,
 			BiorSpline2_4,
@@ -2333,6 +2445,13 @@ namespace wavelets {
 				case Wavelet::Daubechies8:
 					BCDispatch<Daubechies8<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
 					break;
+				case Wavelet::Daubechies9:
+					BCDispatch<Daubechies9<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies10:
+					BCDispatch<Daubechies10<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
+					break;
+
 					// Bior Wavelets
 				case Wavelet::BiorSpline3_1:
 					BCDispatch<BiorSpline3_1<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, levels, data_in, data_out, n_threads);
@@ -2387,6 +2506,13 @@ namespace wavelets {
 				case Wavelet::Daubechies8:
 					BCDispatch<Daubechies8<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
 					break;
+				case Wavelet::Daubechies9:
+					BCDispatch<Daubechies9<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+				case Wavelet::Daubechies10:
+					BCDispatch<Daubechies10<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
+					break;
+
 					// Bior Wavelets
 				case Wavelet::BiorSpline3_1:
 					BCDispatch<BiorSpline3_1<T>, OP>::apply(bc, shape, stride_in, stride_out, axes, level, data_in, data_out, n_threads);
@@ -2509,6 +2635,8 @@ namespace wavelets {
 			case Wavelet::Daubechies6: return max_level<Daubechies6<float>>(n);
 			case Wavelet::Daubechies7: return max_level<Daubechies7<float>>(n);
 			case Wavelet::Daubechies8: return max_level<Daubechies8<float>>(n);
+			case Wavelet::Daubechies9: return max_level<Daubechies9<float>>(n);
+			case Wavelet::Daubechies10: return max_level<Daubechies10<float>>(n);
 			case Wavelet::BiorSpline3_1: return max_level<BiorSpline3_1<float>>(n);
 			case Wavelet::BiorSpline4_2: return max_level<BiorSpline4_2<float>>(n);
 			case Wavelet::BiorSpline6_2: return max_level<BiorSpline6_2<float>>(n);
@@ -2545,6 +2673,7 @@ namespace wavelets {
 	using detail::Daubechies5;
 	using detail::Daubechies6;
 	using detail::Daubechies7;
+	using detail::Daubechies8;
 
 	using detail::BiorSpline3_1;
 	using detail::BiorSpline4_2;

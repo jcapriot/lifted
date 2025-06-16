@@ -3,5 +3,7 @@ from ._wavelets import (
     ilwt,
     lwt_adjoint,
     ilwt_adjoint,
-    get_vectorization_info
+    get_vectorization_info,
+    Wavelet,
+    BoundaryCondition
 )

@@ -15,19 +15,25 @@ cdef extern from "wavelets.hpp" namespace "wavelets":
     bool vector_support
     size_t vector_byte_length
 
-    cdef enum class Wavelet:
-        Daubechies1
-        Daubechies2
-        Daubechies3
-        Daubechies4
-        Daubechies5
-        Daubechies6
-        BiorSpline3_1
-        BiorSpline4_2
-        CDF5_3
+    cpdef enum class Wavelet:
+        Daubechies1,
+        Daubechies2,
+        Daubechies3,
+        Daubechies4,
+        Daubechies5,
+        Daubechies6,
+        Daubechies7,
+        Daubechies8,
+        Daubechies9,
+        Daubechies10,
+        BiorSpline3_1,
+        BiorSpline4_2,
+        BiorSpline2_4,
+        BiorSpline6_2,
+        CDF5_3,
         CDF9_7
 
-    cdef enum class BoundaryCondition:
+    cpdef enum class BoundaryCondition:
         ZERO
         PERIODIC
         CONSTANT
