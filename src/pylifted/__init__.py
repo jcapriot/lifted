@@ -1,9 +1,9 @@
 from ._wavelets import (
-    lwt,
-    ilwt,
-    lwt_adjoint,
-    ilwt_adjoint,
-    get_vectorization_info,
+    lwt_forward,
+    lwt_inverse,
+    lwt_forward_adjoint,
+    lwt_inverse_adjoint,
+    Transform,
     Wavelet,
     BoundaryCondition
 )

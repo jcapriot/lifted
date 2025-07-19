@@ -563,7 +563,9 @@ public:
     }
 };
 
-template<size_t N> class multi_iter
+constexpr static size_t dynamic_size = static_cast<size_t>(-1);
+
+template<size_t N=dynamic_size> class multi_iter
 {
 private:
     size_v pos;
@@ -573,9 +575,8 @@ private:
 
     void advance_i()
     {
-        for (int i_ = int(pos.size()) - 1; i_ >= 0; --i_)
+        for (size_t i = 0; i < pos.size(); ++i)
         {
-            auto i = size_t(i_);
             if (i == idim) continue;
             p_ii += iarr.stride(i);
             p_oi += oarr.stride(i);
@@ -637,6 +638,94 @@ public:
     ptrdiff_t stride_in() const { return str_i; }
     ptrdiff_t stride_out() const { return str_o; }
     size_t remaining() const { return rem; }
+    bool i_across_contiguous() const { return p_i[0] + ptrdiff_t(N) - 1 == p_i[N-1]; }
+    bool o_across_contiguous() const { return p_o[0] + ptrdiff_t(N) - 1 == p_o[N-1]; }
+    bool i_along_contiguous() const { return str_i == 1; }
+    bool o_along_contiguous() const { return str_o == 1; }
+};
+
+template<>
+class multi_iter<dynamic_size>
+{
+private:
+    size_v pos;
+    const arr_info& iarr, & oarr;
+    ptrdiff_t p_ii, str_i, p_oi, str_o;
+    stride_v p_i, p_o;
+    size_t idim, rem;
+    const size_t N;
+
+    void advance_i()
+    {
+        for (size_t i = 0; i < pos.size(); ++i)
+        {
+            if (i == idim) continue;
+            p_ii += iarr.stride(i);
+            p_oi += oarr.stride(i);
+            if (++pos[i] < iarr.shape(i))
+                return;
+            pos[i] = 0;
+            p_ii -= ptrdiff_t(iarr.shape(i)) * iarr.stride(i);
+            p_oi -= ptrdiff_t(oarr.shape(i)) * oarr.stride(i);
+        }
+    }
+
+public:
+    multi_iter(const arr_info& iarr_, const arr_info& oarr_, size_t idim_, size_t const n)
+        : pos(iarr_.ndim(), 0), iarr(iarr_), oarr(oarr_), p_ii(0),
+        str_i(iarr.stride(idim_)), p_oi(0), str_o(oarr.stride(idim_)),
+        p_i(n, 0), p_o(n, 0),
+        idim(idim_), rem(iarr.size() / iarr.shape(idim)),
+        N(n)
+    {
+        auto nshares = threading::num_threads();
+        if (nshares == 1) return;
+        if (nshares == 0) throw std::runtime_error("can't run with zero threads");
+        auto myshare = threading::thread_id();
+        if (myshare >= nshares) throw std::runtime_error("impossible share requested");
+        size_t nbase = rem / nshares;
+        size_t additional = rem % nshares;
+        size_t lo = myshare * nbase + ((myshare < additional) ? myshare : additional);
+        size_t hi = lo + nbase + (myshare < additional);
+        size_t todo = hi - lo;
+
+        size_t chunk = rem;
+        for (size_t i = 0; i < pos.size(); ++i)
+        {
+            if (i == idim) continue;
+            chunk /= iarr.shape(i);
+            size_t n_advance = lo / chunk;
+            pos[i] += n_advance;
+            p_ii += ptrdiff_t(n_advance) * iarr.stride(i);
+            p_oi += ptrdiff_t(n_advance) * oarr.stride(i);
+            lo -= n_advance * chunk;
+        }
+        rem = todo;
+    }
+    void advance(size_t n)
+    {
+        if (rem < n) throw std::runtime_error("underrun");
+        for (size_t i = 0; i < n; ++i)
+        {
+            p_i[i] = p_ii;
+            p_o[i] = p_oi;
+            advance_i();
+        }
+        rem -= n;
+    }
+    ptrdiff_t iofs(size_t i) const { return p_i[0] + ptrdiff_t(i) * str_i; }
+    ptrdiff_t iofs(size_t j, size_t i) const { return p_i[j] + ptrdiff_t(i) * str_i; }
+    ptrdiff_t oofs(size_t i) const { return p_o[0] + ptrdiff_t(i) * str_o; }
+    ptrdiff_t oofs(size_t j, size_t i) const { return p_o[j] + ptrdiff_t(i) * str_o; }
+    size_t length_in() const { return iarr.shape(idim); }
+    size_t length_out() const { return oarr.shape(idim); }
+    ptrdiff_t stride_in() const { return str_i; }
+    ptrdiff_t stride_out() const { return str_o; }
+    size_t remaining() const { return rem; }
+    bool i_across_contiguous() const { return p_i[0] + ptrdiff_t(N) - 1 == p_i[N-1]; }
+    bool o_across_contiguous() const { return p_o[0] + ptrdiff_t(N) - 1 == p_o[N-1]; }
+    bool i_along_contiguous() const { return str_i == 1; }
+    bool o_along_contiguous() const { return str_o == 1; }
 };
 
 class simple_iter
