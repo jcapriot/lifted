@@ -802,8 +802,8 @@ namespace lifted {
 
 	template<typename T>
     class Bior2_2 {
-		constexpr static auto s1 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -0.5L);
-		constexpr static auto s2 = detail::repeat_update_s<T, 2, detail::UpdateOperation::add>(-1, 0.25L);
+		constexpr static auto s1 = detail::repeat_update_d<T, 2>(0, -0.5L);
+		constexpr static auto s2 = detail::repeat_update_s<T, 2>(-1, 0.25L);
 
         constexpr static auto sc = detail::ScaleStep<T>(1.41421356237309504880168872420969807856967187537694807317668L);
     public:
@@ -817,7 +817,7 @@ namespace lifted {
 
 	template<typename T>
     class Bior2_4 {
-		constexpr static auto s1 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -0.5L);
+		constexpr static auto s1 = detail::repeat_update_d<T, 2>(0, -0.5L);
 		constexpr static auto s2 = detail::update_s<T>(-2, -0.046875L, 0.296875L, 0.296875L, -0.046875L);
 
         constexpr static auto sc = detail::ScaleStep<T>(1.41421356237309504880168872420969807856967187537694807317668L);
@@ -832,7 +832,7 @@ namespace lifted {
 
 	template<typename T>
     class Bior2_6{
-		constexpr static auto s1 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -0.5L);
+		constexpr static auto s1 = detail::repeat_update_d<T, 2>(0, -0.5L);
 		constexpr static auto s2 = detail::update_s<T>(-3,
 			0.009765625L, -0.076171874L, 0.31640625L, 0.31640625L, -0.076171875L, 0.009765625L
 		);
@@ -849,7 +849,7 @@ namespace lifted {
 
 	template<typename T>
     class Bior2_8{
-		constexpr static auto s1 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -0.5L);
+		constexpr static auto s1 = detail::repeat_update_d<T, 2>(0, -0.5L);
 		constexpr static auto s2 = detail::update_s<T>(-4,
 			-0.00213623046875L, 0.02044677734375L, -0.09539794921875L, 0.32708740234375L, 0.32708740234375L, -0.09539794921875L, 0.02044677734375L, -0.00213623046875L
 		);
@@ -973,9 +973,9 @@ namespace lifted {
 
 	template<typename T>
     class Bior4_2{
-		constexpr static auto s1 = detail::repeat_update_s<T, 2, detail::UpdateOperation::add>(-1, -0.25L);
-		constexpr static auto s2 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -1.0L);
-		constexpr static auto s3 = detail::repeat_update_s<T, 2, detail::UpdateOperation::add>(-1, 0.1875L);
+		constexpr static auto s1 = detail::repeat_update_s<T, 2>(-1, -0.25L);
+		constexpr static auto s2 = detail::repeat_update_d<T, 2>(0, -1.0L);
+		constexpr static auto s3 = detail::repeat_update_s<T, 2>(-1, 0.1875L);
 
 		constexpr static auto sc = detail::ScaleStep<T>(2.82842712474619009760337744841939615713934375075389614635336L);
     public:
@@ -989,8 +989,8 @@ namespace lifted {
 
 	template<typename T>
     class Bior4_4{
-		constexpr static auto s1 = detail::repeat_update_s<T, 2, detail::UpdateOperation::add>(-1, -0.25L);
-		constexpr static auto s2 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -1.0L);
+		constexpr static auto s1 = detail::repeat_update_s<T, 2>(-1, -0.25L);
+		constexpr static auto s2 = detail::repeat_update_d<T, 2>(0, -1.0L);
 		constexpr static auto s3 = detail::update_s<T>(-2, -0.0390625L, 0.226562L, 0.226562L, -0.0390625L);
 
 		constexpr static auto sc = detail::ScaleStep<T>(2.82842712474619009760337744841939615713934375075389614635336L);
@@ -1005,8 +1005,8 @@ namespace lifted {
 
 	template<typename T>
     class Bior4_6{
-		constexpr static auto s1 = detail::repeat_update_s<T, 2, detail::UpdateOperation::add>(-1, -0.25L);
-		constexpr static auto s2 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -1.0L);
+		constexpr static auto s1 = detail::repeat_update_s<T, 2>(-1, -0.25L);
+		constexpr static auto s2 = detail::repeat_update_d<T, 2>(0, -1.0L);
 		constexpr static auto s3 = detail::update_s<T>(-3, 
 			0.008544921875L, -0.064697265625L, 0.24365234375L, 0.24365234375L, -0.064697265625L, 0.008544921875L
 		);
@@ -1049,9 +1049,9 @@ namespace lifted {
 
 	template<typename T>
     class Bior6_8{
-		constexpr static auto s1 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -0.166666666666666666666666666666666666666666666666666666666667L);
-		constexpr static auto s2 = detail::repeat_update_s<T, 2, detail::UpdateOperation::add>(-1, -0.5625L);
-		constexpr static auto s3 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -1.33333333333333333333333333333333333333333333333333333333333L);
+		constexpr static auto s1 = detail::repeat_update_d<T, 2>(0, -0.166666666666666666666666666666666666666666666666666666666667L);
+		constexpr static auto s2 = detail::repeat_update_s<T, 2>(-1, -0.5625L);
+		constexpr static auto s3 = detail::repeat_update_d<T, 2>(0, -1.33333333333333333333333333333333333333333333333333333333333L);
 		constexpr static auto s4 = detail::update_s<T>(-4,
 			-0.00176239013671875L,
 			0.01650238037109375L,
@@ -1077,8 +1077,8 @@ namespace lifted {
 	template<typename T>
 	class CDF5_3{
 		// This is very close to the Bior2_2
-		constexpr static auto s1 = detail::repeat_update_s<T, 2, detail::UpdateOperation::add>(-1, 0.5L);
-		constexpr static auto s2 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -0.25L);
+		constexpr static auto s1 = detail::repeat_update_s<T, 2>(-1, 0.5L);
+		constexpr static auto s2 = detail::repeat_update_d<T, 2>(0, -0.25L);
 		constexpr static auto sc = detail::ScaleStep<T>(0.707106781186547524400844362104849039284835937688474036588340L);
 	public:
 		using type = T;
@@ -1092,10 +1092,10 @@ namespace lifted {
 	// Traditional CDF wavelets
 	template<typename T>
 	class CDF9_7{
-		constexpr static auto s1 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, -1.58613434205992355842831545133740131985598525529112656778527L);
-		constexpr static auto s2 = detail::repeat_update_s<T, 2, detail::UpdateOperation::add>(-1, -0.0529801185729614146241295675034771089920773921055534971880099L);
-		constexpr static auto s3 = detail::repeat_update_d<T, 2, detail::UpdateOperation::add>(0, 0.882911075530933295919790099002837930341944716149740640164429L);
-		constexpr static auto s4 = detail::repeat_update_s<T, 2, detail::UpdateOperation::add>(-1, 0.443506852043971152115604215168913719478036852964167569567164L);
+		constexpr static auto s1 = detail::repeat_update_d<T, 2>(0, -1.58613434205992355842831545133740131985598525529112656778527L);
+		constexpr static auto s2 = detail::repeat_update_s<T, 2>(-1, -0.0529801185729614146241295675034771089920773921055534971880099L);
+		constexpr static auto s3 = detail::repeat_update_d<T, 2>(0, 0.882911075530933295919790099002837930341944716149740640164429L);
+		constexpr static auto s4 = detail::repeat_update_s<T, 2>(-1, 0.443506852043971152115604215168913719478036852964167569567164L);
 		constexpr static auto sc = detail::ScaleStep<T>(1.14960439886024115979507564219148965843436742907448991688182L);
 	public:
 		using type = T;
@@ -1118,26 +1118,6 @@ namespace detail{
 
 	template<Wavelet WVLT, typename T>
 	using wavelet_from_enum_t = typename wavelet_from_enum<WVLT, T>::type;
-
-	template<Wavelet WVLT, typename T>
-	constexpr static size_t wavelet_width_from_enum(){
-		return wavelet_from_enum_t<WVLT, T>::width;
-	}
-
-	template<typename T>
-    constexpr static array wavelet_width_array{
-		#define X(name, value) wavelet_width_from_enum<Wavelet::name, T>(),
-		LIFTED_WAVELETS
-		#undef X
-    };
-
-	template<typename T>
-	static inline auto wavelet_enum_to_width = []{
-		std::unordered_map<Wavelet, size_t> m;
-		for(size_t i = 0; i < wavelet_enum_array.size(); ++i)
-			m[wavelet_enum_array[i]] = wavelet_width_array<T>[i];
-		return m;
-	}();
 }
 }
 

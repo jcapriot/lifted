@@ -31,19 +31,6 @@ if cy.version().version_compare('>=3.1.0')
   cython_args += ['-Xfreethreading_compatible=True']
 endif
 
-# instantiation_sources = [
-#     'for.cpp',
-#     'for_adj.cpp',
-#     'inv.cpp',
-#     'inv_adj.cpp',
-#     'for_sep.cpp',
-#     'for_sep_adj.cpp',
-#     'inv_sep.cpp',
-#     'inv_sep_adj.cpp'
-# ]
-
-# inst_inc = include_directories('.')
-
 py.extension_module(
     '_wavelets',
     ['_wavelets.pyx'],# + instantiation_sources,

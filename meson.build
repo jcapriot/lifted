@@ -17,7 +17,7 @@ if 'msvc' in cpp_id
 	add_project_arguments('/bigobj', language: 'cpp')
 endif
 
-hwy = subproject('highway')
+hwy = subproject('highway', default_options: {'default_library':'static'})
 hwy_dep = hwy.get_variable('hwy_dep')
 
 not_static_build = get_option('default_library') != 'static'

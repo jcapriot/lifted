@@ -20,7 +20,7 @@ namespace lifted{
     HWY_EXPORT(lwt_float);
 
     void lwt(
-        Wavelet wvlt, Transform op, BoundaryCondition bc,
+        const Wavelet wvlt, const Transform op, const BoundaryCondition bc,
         const size_v& shape, const stride_v& stride_in, const stride_v& stride_out,
         const size_v& axes, const size_t levels,
         const float* data_in, float* data_out, const size_t n_threads

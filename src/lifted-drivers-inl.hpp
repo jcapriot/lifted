@@ -312,10 +312,38 @@ namespace HWY_NAMESPACE {
     };
 
     template<typename T>
+    using FuncType = std::function<void(const BoundaryCondition, const multi_iter_type<T>&, const cndarr<T>&, ndarr<T>&, T* HWY_RESTRICT, size_t)>;
+    
+    template<typename T>
     using SepFuncType = std::function<void(const BoundaryCondition, const multi_iter_type<T>&, const cndarr<T>&, ndarr<T>&, T* HWY_RESTRICT, size_t, size_t)>;
 
-    template<typename T>
-    using NonSepFuncType = std::function<void(const BoundaryCondition, const multi_iter_type<T>&, const cndarr<T>&, ndarr<T>&, T* HWY_RESTRICT, size_t)>;
+    template<DimSeperability SEP, typename T>
+    struct WaveletOperations{
+        using ftype = std::conditional_t<
+            std::same_as<SEP, NonSeperableTransform>,
+            FuncType<T>,
+            SepFuncType<T>
+        >;
+        const bool forward_stepping;
+        const size_t wvlt_width;
+        const ftype along;
+        const ftype across;
+
+        WaveletOperations(
+            const bool forward_stepping_,
+            const size_t wvlt_width_,
+            const ftype& along_,
+            const ftype& across_
+        ) : 
+            along(along_),
+            across(across_),
+            forward_stepping(forward_stepping_),
+            wvlt_width(wvlt_width_)
+        {}
+    };
+
+    template<typename ftype>
+    using func_info = std::tuple<ftype, ftype, bool, size_t>;
 
     template <typename T, VecDir AX, typename FuncType>
     static auto make_jump_table() {
@@ -341,24 +369,62 @@ namespace HWY_NAMESPACE {
         return jump_table;
     }
 
+    template<DimSeperability SEP, typename T>
+    static auto make_wvlt_table(){
+        using op_type = WaveletOperations<SEP, T>;
+        using ftype = typename op_type::ftype;
+        using fi = func_info<ftype>;
+
+        constexpr size_t n_wvlts = std::size(wavelet_enum_array);
+
+        array< array<fi, LIFTED_N_TRANSFORM_TYPES>, n_wvlts> wvlt_table;
+        
+        static_for<n_wvlts>([&]<size_t IW>(){
+            using WVLT = wavelet_from_enum_t<wavelet_enum_array[IW], T>;
+            using driver = Driver<WVLT>;
+            static_for<LIFTED_N_TRANSFORM_TYPES>([&]<size_t IT>(){
+                using TF = transform_from_enum_t<Transform(IT)>;
+                constexpr bool forward_stepping = ForwardStepLoop<TF>;
+                constexpr size_t wvlt_width = WVLT::width;
+
+                wvlt_table[IW][IT] = fi{
+                    ftype{
+                        [&](auto&&... args) {
+                            driver::apply(
+                                TF(),
+                                Along(),
+                                std::forward<decltype(args)>(args)...
+                            );
+                        }
+                    },
+                    ftype{
+                        [&](auto&&... args) {
+                            driver::apply(
+                                TF(),
+                                Across(),
+                                std::forward<decltype(args)>(args)...
+                            );
+                        }
+                    },
+                    forward_stepping,
+                    wvlt_width, 
+                };
+            });
+        });
+        return wvlt_table;
+    }
+
     template<typename T>
     // seperable ND transform
-    static void seperable_lifting_transform(
-        const Wavelet wvlt, const Transform op, const BoundaryCondition bc,
+    static void general_nd(
+        const func_info<SepFuncType<T>>& fi, const BoundaryCondition bc, 
         const size_v& shape, const stride_v& stride_in, const stride_v& stride_out,
         const size_v& axes, const size_v& levels,
         const T* data_in, T* data_out, const size_t n_threads
     ){
-        const static auto along_jump_table = make_jump_table<T, Along, SepFuncType<T>>();
-        const static auto across_jump_table = make_jump_table<T, Across, SepFuncType<T>>();
-
-        const size_t i_wvlt = wavelet_enum_to_index[wvlt];
-        const size_t wvlt_width = wavelet_enum_to_width<T>[wvlt];
-        const size_t i_tt = static_cast<size_t>(op);
-
-        const auto& across_func = across_jump_table[i_wvlt][i_tt];
-        const auto& along_func = along_jump_table[i_wvlt][i_tt];
-
+        const auto& along = std::get<0>(fi);
+        const auto& across = std::get<1>(fi);
+        const auto wvlt_width = std::get<3>(fi);
         HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(hn::ScalableTag<T>());
 
         const size_t ndim = shape.size();
@@ -408,34 +474,29 @@ namespace HWY_NAMESPACE {
                     #endif
                     while (it.remaining() >= lanes) {
                         it.advance(lanes);
-                        across_func(bc, it, tin, aout, storage.get(), len, level);
+                        across(bc, it, tin, aout, storage.get(), len, level);
                     }
                     while (it.remaining() > 0) {
                         it.advance(1);
-                        along_func(bc, it, tin, aout, storage.get(), len, level);
+                        along(bc, it, tin, aout, storage.get(), len, level);
                     }
                 }
             );  // end of parallel region
         }
     }
-    
+
     template<typename T>
     // non-seperable ND transform
-    static void lifting_transform(
-        const Wavelet wvlt, const Transform op, const BoundaryCondition bc,
+    static void general_nd(
+        const func_info<FuncType<T>>& fi, const BoundaryCondition bc,
         const size_v& shape, const stride_v& stride_in, const stride_v& stride_out,
         const size_v& axes, const size_t level,
         const T* data_in, T* data_out, const size_t n_threads
     ){
-        const static auto along_jump_table = make_jump_table<T, Along, NonSepFuncType<T>>();
-        const static auto across_jump_table = make_jump_table<T, Across, NonSepFuncType<T>>();
-
-        const size_t i_wvlt = wavelet_enum_to_index[wvlt];
-        const size_t wvlt_width = wavelet_enum_to_width<T>[wvlt];
-        const size_t i_tt = static_cast<size_t>(op);
-
-        const auto& across_func = across_jump_table[i_wvlt][i_tt];
-        const auto& along_func = along_jump_table[i_wvlt][i_tt];
+        const auto& along = std::get<0>(fi);
+        const auto& across = std::get<1>(fi);
+        const auto forward_stepping = std::get<2>(fi);
+        const auto wvlt_width = std::get<3>(fi);
 
         HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(hn::ScalableTag<T>());
 
@@ -474,11 +535,9 @@ namespace HWY_NAMESPACE {
         for (size_t ilvl = 1; ilvl < lvl; ++ilvl){
             auto& shape_im1 = level_shapes[ilvl - 1];
             auto shape_i = size_v(shape_im1);
-            for (auto ax : axes) shape_i[ax] = shape_im1[ax] - shape_im1[ax] / 2;
+            for (auto ax : axes_) shape_i[ax] = shape_im1[ax] - shape_im1[ax] / 2;
             level_shapes[ilvl] = shape_i;
         }
-
-        const bool forward_stepping = (op == Transform::Forward) || (op == Transform::InverseAdjoint);
 
         if (!forward_stepping) {
             if (data_in != data_out) {
@@ -535,11 +594,11 @@ namespace HWY_NAMESPACE {
 
                         while (!out_dim_contiguous && (it.remaining() >= lanes)) {
                             it.advance(lanes);
-                            across_func(bc, it, tin, aout, storage.get(), len);
+                            across(bc, it, tin, aout, storage.get(), len);
                         }
                         while (it.remaining() > 0) {
                             it.advance(1);
-                            along_func(bc, it, tin, aout, storage.get(), len);
+                            along(bc, it, tin, aout, storage.get(), len);
                         }
                     }
                 );  // end of parallel region
@@ -550,12 +609,51 @@ namespace HWY_NAMESPACE {
         }
     }
 
+
+    template<DimSeperability SEP, typename T, typename...Ts>
+    static void lifting_transform_dispatcher(
+        const Wavelet wvlt, const Transform op,
+        Ts&&... args
+    ){
+        const static auto ops_table = make_wvlt_table<SEP, T>();
+
+        const size_t i_wvlt = wavelet_enum_to_index[wvlt];
+        const size_t i_tt = static_cast<size_t>(op);
+    
+        general_nd(ops_table[i_wvlt][i_tt], std::forward<Ts>(args)...);
+    }
 }
 }
 namespace HWY_NAMESPACE {
     namespace dh = detail::HWY_NAMESPACE;
-    using dh::seperable_lifting_transform;
-    using dh::lifting_transform;
+
+    template<typename T>
+    static void lifting_transform(
+        const Wavelet wvlt, const Transform op, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out,
+        const size_v& axes, const size_t level,
+        const T* data_in, T* data_out, const size_t n_threads
+    ){
+        dh::lifting_transform_dispatcher<NonSeperableTransform, T>(
+            wvlt, op, bc,
+            shape, stride_in, stride_out,
+            axes, level, data_in, data_out, n_threads
+        );
+    }
+
+    template<typename T>
+    static void seperable_lifting_transform(
+        const Wavelet wvlt, const Transform op, const BoundaryCondition bc,
+        const size_v& shape, const stride_v& stride_in, const stride_v& stride_out,
+        const size_v& axes, const size_v& levels,
+        const T* data_in, T* data_out, const size_t n_threads
+    ){
+        dh::lifting_transform_dispatcher<SeperableTransform, T>(
+            wvlt, op, bc,
+            shape, stride_in, stride_out,
+            axes, levels, data_in, data_out, n_threads
+        );
+    }
 }
 }
 HWY_AFTER_NAMESPACE();

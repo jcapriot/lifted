@@ -7,425 +7,444 @@
 #include <tuple>
 #include <numeric>
 #include <utility>
+#include <span>
 
-#include "wavelets.hpp"
+#include "lifted.hpp"
 #include "test_helpers.h"
 
-#include <gtest/gtest.h>
+#undef HWY_TARGET_INCLUDE
+#define HWY_TARGET_INCLUDE "test_single_levels.cpp"
+#include "hwy/foreach_target.h"
+#include "lifted-inl.hpp"
+// Must come after foreach_target.h to avoid redefinition errors.
+#include "hwy/aligned_allocator.h"
+#include "hwy/highway.h"
 
+#include "hwy/tests/test_util-inl.h"
 
 // This test is for validating the single level transform drivers
 // for forward, inverse, forward_adjoint, and inverse_adjoints, for
 // all boundary conditions, and for both an even and odd length input.
 
+HWY_BEFORE_NAMESPACE();
+namespace lifted {
+namespace detail {
+namespace HWY_NAMESPACE{
+    template<typename T>
+    static auto make_test_jump_table() {
 
-using namespace wavelets;
-using namespace test_helpers;
+        using FuncType = std::function<void (const BoundaryCondition, T*, T*, const size_t, const size_t)>;
 
+        array< array< array<FuncType, 2>, LIFTED_N_TRANSFORM_TYPES>, LIFTED_TESTING_N_MOCKWAVELETS> jump_table;
 
-// Define type lists
-using WVLTs = TestWavelets;
-using BCs = AllBoundaryConditions;
-using Ns = std::integer_sequence<size_t, 512, 331>;
-
-using WaveletTestMatrix = typename generate_all<WVLTs, Ns, BCs>::type;
-
-// Helper: convert std::tuple<Ts...> to ::testing::Types<Ts...>
-template <typename Tuple>
-struct TupleToTypes;
-
-template <typename... Ts>
-struct TupleToTypes<std::tuple<Ts...>> {
-	using type = ::testing::Types<Ts...>;
-};
-
-template <typename CONFIG>
-class TestTrasformAndAdjoint : public ::testing::Test {
-public:
-	using WVLT = typename CONFIG::WVLT;
-	using T = typename CONFIG::T;
-	constexpr static size_t N = CONFIG::N;
-	using BC = typename CONFIG::BC;
-};
-
-TYPED_TEST_SUITE_P(TestTrasformAndAdjoint);
-
-// 2. Define tests
-TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForwardBackward) {
-	// Test that forward and inverse are actually inverses of each other.
-
-	using WVLT = typename TestFixture::WVLT;
-	using T = typename WVLT::type;
-	using BC = typename TestFixture::BC;
-
-	T rtol = 1E-7;
-	T atol = 0;
-
-	constexpr size_t N = TestFixture::N;
-	constexpr size_t N_o = N / 2;
-	constexpr size_t N_e = N - N_o;
-
-	std::array<T, N> arr_in;
-	std::array<T, N_e> arr_e;
-	std::array<T, N_o> arr_o;
-	std::array<T, N> arr_out;
-
-	fill_sin(arr_in, -11, 13);
-
-	deinterleave(arr_in, arr_e, arr_o);
-	interleave(arr_e, arr_o, arr_out);
-
-	LiftingTransform<WVLT, BC>::forward(arr_e, arr_o);
-
-	LiftingTransform<WVLT, BC>::inverse(arr_e, arr_o);
-
-	interleave(arr_e, arr_o, arr_out);
-
-	for (size_t i = 0; i < arr_out.size(); ++i)
-		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
+        static_for<LIFTED_TESTING_N_MOCKWAVELETS>([&]<size_t IW>(){
+            using WVLT = mock_wavelet_from_enum_t<MockWavelet(IW), T>;
+            static_for<LIFTED_N_TRANSFORM_TYPES>([&]<size_t IT>(){
+                using TF = transform_from_enum_t<Transform(IT)>;
+                static_for<2>([&]<size_t IDIR>(){
+                    using AX = test_vecdir_from_enum_t<TestVecDir(IDIR)>;
+                    jump_table[IW][IT][IDIR] = FuncType{[&](auto&&... args) {
+                            FixedTransform<WVLT>::apply(TF(), AX(),
+                                std::forward<decltype(args)>(args)...
+                            );
+                        }
+                    };
+                });
+            });
+        });
+        return jump_table;
+    }	
+}
 }
 
-TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForwardStrided) {
-	// Test that the strided versions work as well
+namespace HWY_NAMESPACE {
 
-	using WVLT = typename TestFixture::WVLT;
-	using T = typename WVLT::type;
-	using BC = typename TestFixture::BC;
+	using prec = double;
 
-	T rtol = 1E-7;
-	T atol = 0;
+	namespace lfd = lifted::detail::HWY_NAMESPACE;
+	namespace hn = hwy::HWY_NAMESPACE;
 
-	constexpr size_t N = TestFixture::N;
-	constexpr size_t N_o = N / 2;
-	constexpr size_t N_e = N - N_o;
+	const static auto test_jump_table = lfd::make_test_jump_table<prec>();
 
-	std::array<T, N> arr_in;
-	std::array<T, N_e> arr_e;
-	std::array<T, N_o> arr_o;
-	std::array<T, N> arr_out;
+	HWY_NOINLINE void ValidateForwardBackward(
+		const detail::test_parameters& params
+	){
+		const detail::MockWavelet wvlt = std::get<0>(params);
+		const BoundaryCondition bc = std::get<1>(params);
+		const detail::TestVecDir ax = std::get<2>(params);
+		const size_t len = std::get<3>(params);
 
-	fill_sin(arr_in, -11, 13);
-	arr_out = arr_in;
+		const size_t iw = static_cast<size_t>(wvlt);
+		const size_t it_f = static_cast<size_t>(Transform::Forward);
+		const size_t it_i = static_cast<size_t>(Transform::Inverse);
+		const size_t idir = static_cast<size_t>(ax);
 
-	deinterleave(arr_in, arr_e, arr_o);
+		const auto& for_func = test_jump_table[iw][it_f][idir];
+		const auto& inv_func = test_jump_table[iw][it_i][idir];
 
-	LiftingTransform<WVLT, BC>::forward(arr_e, arr_o);
+		const bool is_vec = ax == detail::TestVecDir::Across;
 
-	LiftingTransform<WVLT, BC>::forward(arr_out);
+		prec rtol = 1E-6;
+		prec atol = 0;
+		
+		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
 
-	interleave(arr_e, arr_o, arr_in);
+		const size_t N_o = len / 2;
+		const size_t N_e = len - N_o;
 
-	for (size_t i = 0; i < arr_out.size(); ++i)
-		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
+		const size_t Nt_o = N_o * nv;
+		const size_t Nt_e = N_e * nv;
+
+		auto alligned_arr_e = hwy::AllocateAligned<prec>(Nt_e);
+		auto alligned_arr_o = hwy::AllocateAligned<prec>(Nt_o);
+
+		auto arr_e = std::span(alligned_arr_e.get(), Nt_e);
+		auto arr_o = std::span(alligned_arr_o.get(), Nt_o);
+
+		detail::fill_sin(arr_e, -11.1, 13.4);
+		detail::fill_sin(arr_o, -10.2, 12.15);
+
+		auto ref_e = std::vector<prec>(Nt_e);
+		auto ref_o = std::vector<prec>(Nt_o);
+
+		detail::fill_sin(ref_e, -11.1, 13.4);
+		detail::fill_sin(ref_o, -10.2, 12.15);
+
+		for_func(bc, &arr_e[0], &arr_o[0], N_o, N_e);
+		inv_func(bc, &arr_e[0], &arr_o[0], N_o, N_e);
+		
+		for (size_t i = 0; i < Nt_e; ++i)
+			EXPECT_NEAR(ref_e[i], arr_e[i], atol + rtol * std::abs(ref_e[i]));
+		
+		for (size_t i = 0; i < Nt_o; ++i)
+			EXPECT_NEAR(ref_o[i], arr_o[i], atol + rtol * std::abs(ref_o[i]));
+	}
+	
+	HWY_NOINLINE void ValidateAdjointForwardBackward(
+		const detail::test_parameters& params
+	){
+		const detail::MockWavelet wvlt = std::get<0>(params);
+		const BoundaryCondition bc = std::get<1>(params);
+		const detail::TestVecDir ax = std::get<2>(params);
+		const size_t len = std::get<3>(params);
+
+		const size_t iw = static_cast<size_t>(wvlt);
+		const size_t it_f = static_cast<size_t>(Transform::ForwardAdjoint);
+		const size_t it_i = static_cast<size_t>(Transform::InverseAdjoint);
+		const size_t idir = static_cast<size_t>(ax);
+
+		const auto& for_func = test_jump_table[iw][it_f][idir];
+		const auto& inv_func = test_jump_table[iw][it_i][idir];
+
+		const bool is_vec = ax == detail::TestVecDir::Across;
+
+		prec rtol = 1E-6;
+		prec atol = 0;
+		
+		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
+
+		const size_t N_o = len / 2;
+		const size_t N_e = len - N_o;
+
+		const size_t Nt_o = N_o * nv;
+		const size_t Nt_e = N_e * nv;
+
+		auto alligned_arr_e = hwy::AllocateAligned<prec>(Nt_e);
+		auto alligned_arr_o = hwy::AllocateAligned<prec>(Nt_o);
+
+		auto arr_e = std::span(alligned_arr_e.get(), Nt_e);
+		auto arr_o = std::span(alligned_arr_o.get(), Nt_o);
+
+		detail::fill_sin(arr_e, -11.1, 13.4);
+		detail::fill_sin(arr_o, -10.2, 12.15);
+
+		auto ref_e = std::vector<prec>(Nt_e);
+		auto ref_o = std::vector<prec>(Nt_o);
+
+		detail::fill_sin(ref_e, -11.1, 13.4);
+		detail::fill_sin(ref_o, -10.2, 12.15);
+
+		for_func(bc, &arr_e[0], &arr_o[0], N_o, N_e);
+		inv_func(bc, &arr_e[0], &arr_o[0], N_o, N_e);
+		
+		for (size_t i = 0; i < Nt_e; ++i)
+			EXPECT_NEAR(ref_e[i], arr_e[i], atol + rtol * std::abs(ref_e[i]));
+		
+		for (size_t i = 0; i < Nt_o; ++i)
+			EXPECT_NEAR(ref_o[i], arr_o[i], atol + rtol * std::abs(ref_o[i]));
+	}
+	
+	HWY_NOINLINE void ValidateForwardAdjoint(
+		const detail::test_parameters& params
+	){
+		const detail::MockWavelet wvlt = std::get<0>(params);
+		const BoundaryCondition bc = std::get<1>(params);
+		const detail::TestVecDir ax = std::get<2>(params);
+		const size_t len = std::get<3>(params);
+
+		const size_t iw = static_cast<size_t>(wvlt);
+		const size_t it_f = static_cast<size_t>(Transform::Forward);
+		const size_t it_fT = static_cast<size_t>(Transform::ForwardAdjoint);
+		const size_t idir = static_cast<size_t>(ax);
+
+		const auto& for_func = test_jump_table[iw][it_f][idir];
+		const auto& forT_func = test_jump_table[iw][it_fT][idir];
+
+		const bool is_vec = ax == detail::TestVecDir::Across;
+
+		prec rtol = 1E-6;
+		prec atol = 0;
+		
+		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
+
+		const size_t N_o = len / 2;
+		const size_t N_e = len - N_o;
+
+		const size_t Nt = len * nv;
+		const size_t Nt_o = N_o * nv;
+		const size_t Nt_e = N_e * nv;
+
+		auto alligned_u = hwy::AllocateAligned<prec>(Nt);
+		auto u = std::span(alligned_u.get(), Nt);
+		auto u_e = std::span(u.begin(), Nt_e);
+		auto u_o = std::span(&u[Nt_e], Nt_o);
+
+		auto alligned_v = hwy::AllocateAligned<prec>(Nt);
+		auto v = std::span(alligned_v.get(), Nt);
+		auto v_e = std::span(v.begin(), Nt_e);
+		auto v_o = std::span(&v[Nt_e], Nt_o);
+
+		auto alligned_ref_u = hwy::AllocateAligned<prec>(Nt);
+		auto ref_u = std::span(alligned_ref_u.get(), Nt);
+		auto alligned_v_out = hwy::AllocateAligned<prec>(Nt);
+		auto v_out = std::span(alligned_v_out.get(), Nt);
+
+		detail::fill_sin(v, -255.0, 442.0);
+		detail::fill_sin(ref_u, -200.0, 200.0);
+
+		if(is_vec){
+			lfd::deinterleave(detail::Across(), &ref_u[0], &u[0], len);
+		}else{
+			lfd::deinterleave(detail::Along(), &ref_u[0], &u[0], len);
+		}
+
+		for_func(bc, &u_e[0], &u_o[0], N_e, N_o);
+		prec v_Fu = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
+
+		forT_func(bc, &v_e[0], &v_o[0], N_e, N_o);
+
+		if(is_vec){
+			lfd::interleave(detail::Across(), &v[0], &v_out[0], len);
+		}else{
+			lfd::interleave(detail::Along(), &v[0], &v_out[0], len);
+		}
+		prec vFT_u = std::inner_product(v_out.begin(), v_out.end(), ref_u.begin(), 0.0);
+
+		EXPECT_NEAR(v_Fu, vFT_u, atol + rtol * std::abs(vFT_u));
+	}
+
+	HWY_NOINLINE void ValidateInverseAdjoint(
+		const detail::test_parameters& params
+	){
+		const detail::MockWavelet wvlt = std::get<0>(params);
+		const BoundaryCondition bc = std::get<1>(params);
+		const detail::TestVecDir ax = std::get<2>(params);
+		const size_t len = std::get<3>(params);
+
+		const size_t iw = static_cast<size_t>(wvlt);
+		const size_t it_i = static_cast<size_t>(Transform::Inverse);
+		const size_t it_iT = static_cast<size_t>(Transform::InverseAdjoint);
+		const size_t idir = static_cast<size_t>(ax);
+
+		const auto& inv_func = test_jump_table[iw][it_i][idir];
+		const auto& invT_func = test_jump_table[iw][it_iT][idir];
+
+		const bool is_vec = ax == detail::TestVecDir::Across;
+
+		prec rtol = 1E-6;
+		prec atol = 0;
+		
+		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
+
+		const size_t N_o = len / 2;
+		const size_t N_e = len - N_o;
+
+		const size_t Nt = len * nv;
+		const size_t Nt_o = N_o * nv;
+		const size_t Nt_e = N_e * nv;
+
+		auto alligned_u = hwy::AllocateAligned<prec>(Nt);
+		auto u = std::span(alligned_u.get(), Nt);
+		auto u_e = std::span(u.begin(), Nt_e);
+		auto u_o = std::span(&u[Nt_e], Nt_o);
+
+		auto alligned_v = hwy::AllocateAligned<prec>(Nt);
+		auto v = std::span(alligned_v.get(), Nt);
+		auto v_e = std::span(v.begin(), Nt_e);
+		auto v_o = std::span(&v[Nt_e], Nt_o);
+
+		auto alligned_ref_u = hwy::AllocateAligned<prec>(Nt);
+		auto ref_u = std::span(alligned_ref_u.get(), Nt);
+		auto alligned_v_out = hwy::AllocateAligned<prec>(Nt);
+		auto v_out = std::span(alligned_v_out.get(), Nt);
+
+		detail::fill_sin(v, -255.0, 442.0);
+		detail::fill_sin(ref_u, -200.0, 200.0);
+
+		if(is_vec){
+			lfd::deinterleave(detail::Across(), &ref_u[0], &u[0], len);
+		}else{
+			lfd::deinterleave(detail::Along(), &ref_u[0], &u[0], len);
+		}
+
+		inv_func(bc, &u_e[0], &u_o[0], N_e, N_o);
+		prec v_Fu = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
+
+		invT_func(bc, &v_e[0], &v_o[0], N_e, N_o);
+
+		if(is_vec){
+			lfd::interleave(detail::Across(), &v[0], &v_out[0], len);
+		}else{
+			lfd::interleave(detail::Along(), &v[0], &v_out[0], len);
+		}
+		prec vFT_u = std::inner_product(v_out.begin(), v_out.end(), ref_u.begin(), 0.0);
+
+		EXPECT_NEAR(v_Fu, vFT_u, atol + rtol * std::abs(vFT_u));
+	}
+
+	HWY_NOINLINE void ValidateForwardDotInverseAdjoint(
+		const detail::test_parameters& params
+	){
+		const detail::MockWavelet wvlt = std::get<0>(params);
+		const BoundaryCondition bc = std::get<1>(params);
+		const detail::TestVecDir ax = std::get<2>(params);
+		const size_t len = std::get<3>(params);
+
+		const size_t iw = static_cast<size_t>(wvlt);
+		const size_t it_f = static_cast<size_t>(Transform::Forward);
+		const size_t it_iT = static_cast<size_t>(Transform::InverseAdjoint);
+		const size_t idir = static_cast<size_t>(ax);
+
+		const auto& for_func = test_jump_table[iw][it_f][idir];
+		const auto& invT_func = test_jump_table[iw][it_iT][idir];
+
+		const bool is_vec = ax == detail::TestVecDir::Across;
+
+		prec rtol = 1E-6;
+		prec atol = 0;
+		
+		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
+
+		const size_t N_o = len / 2;
+		const size_t N_e = len - N_o;
+
+		const size_t Nt = len * nv;
+		const size_t Nt_o = N_o * nv;
+		const size_t Nt_e = N_e * nv;
+
+		auto alligned_u = hwy::AllocateAligned<prec>(Nt);
+		auto u = std::span(alligned_u.get(), Nt);
+		auto u_e = std::span(u.begin(), Nt_e);
+		auto u_o = std::span(&u[Nt_e], Nt_o);
+
+		auto alligned_v = hwy::AllocateAligned<prec>(Nt);
+		auto v = std::span(alligned_v.get(), Nt);
+		auto v_e = std::span(v.begin(), Nt_e);
+		auto v_o = std::span(&v[Nt_e], Nt_o);
+
+		detail::fill_sin(v, -255.0, 442.0);
+		detail::fill_sin(u, -200.0, 200.0);
+
+		prec v_dot_u = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
+
+		for_func(bc, &u_e[0], &u_o[0], N_e, N_o);
+		invT_func(bc, &v_e[0], &v_o[0], N_e, N_o);
+
+		prec vw_dot_uw = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
+
+		EXPECT_NEAR(v_dot_u, vw_dot_uw, atol + rtol * std::abs(v_dot_u));
+	}
+
+	HWY_NOINLINE void ValidateInverseDotForwardAdjoint(
+		const detail::test_parameters& params
+	){
+		const detail::MockWavelet wvlt = std::get<0>(params);
+		const BoundaryCondition bc = std::get<1>(params);
+		const detail::TestVecDir ax = std::get<2>(params);
+		const size_t len = std::get<3>(params);
+
+		const size_t iw = static_cast<size_t>(wvlt);
+		const size_t it_fT = static_cast<size_t>(Transform::ForwardAdjoint);
+		const size_t it_i = static_cast<size_t>(Transform::Inverse);
+		const size_t idir = static_cast<size_t>(ax);
+
+		const auto& forT_func = test_jump_table[iw][it_fT][idir];
+		const auto& inv_func = test_jump_table[iw][it_i][idir];
+
+		const bool is_vec = ax == detail::TestVecDir::Across;
+
+		prec rtol = 1E-6;
+		prec atol = 0;
+		
+		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
+
+		const size_t N_o = len / 2;
+		const size_t N_e = len - N_o;
+
+		const size_t Nt = len * nv;
+		const size_t Nt_o = N_o * nv;
+		const size_t Nt_e = N_e * nv;
+
+		auto alligned_u = hwy::AllocateAligned<prec>(Nt);
+		auto u = std::span(alligned_u.get(), Nt);
+		auto u_e = std::span(u.begin(), Nt_e);
+		auto u_o = std::span(&u[Nt_e], Nt_o);
+
+		auto alligned_v = hwy::AllocateAligned<prec>(Nt);
+		auto v = std::span(alligned_v.get(), Nt);
+		auto v_e = std::span(v.begin(), Nt_e);
+		auto v_o = std::span(&v[Nt_e], Nt_o);
+
+		detail::fill_sin(v, -255.0, 442.0);
+		detail::fill_sin(u, -200.0, 200.0);
+
+		prec v_dot_u = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
+
+		forT_func(bc, &u_e[0], &u_o[0], N_e, N_o);
+		inv_func(bc, &v_e[0], &v_o[0], N_e, N_o);
+
+		prec vw_dot_uw = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
+
+		EXPECT_NEAR(v_dot_u, vw_dot_uw, atol + rtol * std::abs(v_dot_u));
+	}
+}
+}
+HWY_AFTER_NAMESPACE();
+
+#if HWY_ONCE
+
+namespace lifted{
+
+	class LiftedTestSuite : public hwy::TestWithParamTargetAndT<detail::test_parameters>{};
+
+	HWY_TARGET_INSTANTIATE_TEST_SUITE_P_T(
+		LiftedTestSuite,
+		::testing::Combine(
+			::testing::ValuesIn(detail::mock_wavelet_enum_array),
+			::testing::ValuesIn(detail::bc_enum_array),
+			::testing::Values(
+				detail::TestVecDir::Along, detail::TestVecDir::Across
+			),
+			::testing::Values(std::size_t(153), std::size_t(510))
+		)
+	);
+
+	HWY_EXPORT_AND_TEST_P_T(LiftedTestSuite, ValidateForwardBackward);
+	HWY_EXPORT_AND_TEST_P_T(LiftedTestSuite, ValidateAdjointForwardBackward);
+	HWY_EXPORT_AND_TEST_P_T(LiftedTestSuite, ValidateForwardAdjoint);
+	HWY_EXPORT_AND_TEST_P_T(LiftedTestSuite, ValidateInverseAdjoint);
+	HWY_EXPORT_AND_TEST_P_T(LiftedTestSuite, ValidateForwardDotInverseAdjoint);
+	HWY_EXPORT_AND_TEST_P_T(LiftedTestSuite, ValidateInverseDotForwardAdjoint);
 }
 
-TYPED_TEST_P(TestTrasformAndAdjoint, ValidateInverseStrided) {
-	// Test that the strided versions work as well
-
-	using WVLT = typename TestFixture::WVLT;
-	using T = typename WVLT::type;
-	using BC = typename TestFixture::BC;
-
-	T rtol = 1E-7;
-	T atol = 0;
-
-	constexpr size_t N = TestFixture::N;
-	constexpr size_t N_o = N / 2;
-	constexpr size_t N_e = N - N_o;
-
-	std::array<T, N> arr_in;
-	std::array<T, N_e> arr_e;
-	std::array<T, N_o> arr_o;
-	std::array<T, N> arr_out;
-
-	fill_sin(arr_in, -11, 13);
-	arr_out = arr_in;
-
-	deinterleave(arr_in, arr_e, arr_o);
-
-	LiftingTransform<WVLT, BC>::inverse(arr_e, arr_o);
-
-	LiftingTransform<WVLT, BC>::inverse(arr_out);
-
-	interleave(arr_e, arr_o, arr_in);
-
-	for (size_t i = 0; i < arr_out.size(); ++i)
-		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
-}
-
-TYPED_TEST_P(TestTrasformAndAdjoint, ValidateAdjointForwardBackward) {
-	// Test that forward_adjoint and inverse_adjoint are actually inverses of each other.
-
-	using WVLT = typename TestFixture::WVLT;
-	using T = typename WVLT::type;
-	using BC = typename TestFixture::BC;
-
-	T rtol = 1E-7;
-	T atol = 0;
-
-	constexpr size_t N = TestFixture::N;
-	constexpr size_t N_o = N / 2;
-	constexpr size_t N_e = N - N_o;
-
-	std::array<T, N> arr_in;
-	std::array<T, N_e> arr_e;
-	std::array<T, N_o> arr_o;
-	std::array<T, N> arr_out;
-
-	fill_sin(arr_in, -11, 13);
-
-	deinterleave(arr_in, arr_e, arr_o);
-	interleave(arr_e, arr_o, arr_out);
-
-	LiftingTransform<WVLT, BC>::forward_adjoint(arr_e, arr_o);
-
-	LiftingTransform<WVLT, BC>::inverse_adjoint(arr_e, arr_o);
-
-	interleave(arr_e, arr_o, arr_out);
-
-	for (size_t i = 0; i < arr_out.size(); ++i)
-		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
-}
-
-TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForwardAdjointStrided) {
-	// Test that the strided versions work as well
-
-	using WVLT = typename TestFixture::WVLT;
-	using T = typename WVLT::type;
-	using BC = typename TestFixture::BC;
-
-	T rtol = 1E-7;
-	T atol = 0;
-
-	constexpr size_t N = TestFixture::N;
-	constexpr size_t N_o = N / 2;
-	constexpr size_t N_e = N - N_o;
-
-	std::array<T, N> arr_in;
-	std::array<T, N_e> arr_e;
-	std::array<T, N_o> arr_o;
-	std::array<T, N> arr_out;
-
-	fill_sin(arr_in, -11, 13);
-	arr_out = arr_in;
-
-	deinterleave(arr_in, arr_e, arr_o);
-
-	LiftingTransform<WVLT, BC>::forward_adjoint(arr_e, arr_o);
-
-	LiftingTransform<WVLT, BC>::forward_adjoint(arr_out);
-
-	interleave(arr_e, arr_o, arr_in);
-
-	for (size_t i = 0; i < arr_out.size(); ++i)
-		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
-}
-
-TYPED_TEST_P(TestTrasformAndAdjoint, ValidateInverseAdjointStrided) {
-	// Test that the strided versions work as well
-
-	using WVLT = typename TestFixture::WVLT;
-	using T = typename WVLT::type;
-	using BC = typename TestFixture::BC;
-
-	T rtol = 1E-7;
-	T atol = 0;
-
-	constexpr size_t N = TestFixture::N;
-	constexpr size_t N_o = N / 2;
-	constexpr size_t N_e = N - N_o;
-
-	std::array<T, N> arr_in;
-	std::array<T, N_e> arr_e;
-	std::array<T, N_o> arr_o;
-	std::array<T, N> arr_out;
-
-	fill_sin(arr_in, -11, 13);
-	arr_out = arr_in;
-
-	deinterleave(arr_in, arr_e, arr_o);
-
-	LiftingTransform<WVLT, BC>::inverse_adjoint(arr_e, arr_o);
-
-	LiftingTransform<WVLT, BC>::inverse_adjoint(arr_out);
-
-	interleave(arr_e, arr_o, arr_in);
-
-	for (size_t i = 0; i < arr_out.size(); ++i)
-		EXPECT_NEAR(arr_out[i], arr_in[i], atol + rtol * std::abs(arr_in[i]));
-}
-
-TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForwardAdjoint) {
-	// Test that forward and forward_adjoint are actually adjoints of each other.
-
-	using WVLT = typename TestFixture::WVLT;
-	using T = typename WVLT::type;
-	using BC = typename TestFixture::BC;
-
-	T rtol = 1E-7;
-	T atol = 0;
-
-	constexpr size_t N = TestFixture::N;
-
-	constexpr size_t N_o = N / 2;
-	constexpr size_t N_e = N - N_o;
-
-	std::array<T, N> u;
-	std::array<T, N_e> u_s;
-	std::array<T, N_o> u_d;
-
-	std::array<T, N> v;
-	std::array<T, N_e> v_s;
-	std::array<T, N_o> v_d;
-
-	fill_sin(u, -200, 200);
-	fill_sin(v_s, -50, 50);
-	fill_sin(v_d, -100, -50);
-	deinterleave(u, u_s, u_d);
-
-	LiftingTransform<WVLT, BC>::forward(u_s, u_d);
-	T v1 = std::inner_product(v_s.begin(), v_s.end(), u_s.begin(), 0.0)
-		+ std::inner_product(v_d.begin(), v_d.end(), u_d.begin(), 0.0);
-
-
-	LiftingTransform<WVLT, BC>::forward_adjoint(v_s, v_d);
-	interleave(v_s, v_d, v);
-
-	T v2 = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
-
-	EXPECT_NEAR(v1, v2, atol + rtol * std::abs(v2));
-}
-
-TYPED_TEST_P(TestTrasformAndAdjoint, ValidateInverseAdjoint) {
-	// Test that inverse and inverse_adjoint are actually adjoints of each other.
-
-	using WVLT = typename TestFixture::WVLT;
-	using T = typename WVLT::type;
-	using BC = typename TestFixture::BC;
-
-	T rtol = 1E-7;
-	T atol = 0;
-
-	constexpr size_t N = TestFixture::N;
-
-	constexpr size_t N_o = N / 2;
-	constexpr size_t N_e = N - N_o;
-
-	std::array<T, N> u;
-	std::array<T, N_e> u_s;
-	std::array<T, N_o> u_d;
-
-	std::array<T, N> v;
-	std::array<T, N_e> v_s;
-	std::array<T, N_o> v_d;
-
-	fill_sin(u, -200, 101);
-	fill_sin(v_s, -50, 51);
-	fill_sin(v_d, -100, -51);
-	deinterleave(u, u_s, u_d);
-
-	LiftingTransform<WVLT, BC>::inverse(u_s, u_d);
-	T v1 = std::inner_product(v_s.begin(), v_s.end(), u_s.begin(), 0.0)
-		+ std::inner_product(v_d.begin(), v_d.end(), u_d.begin(), 0.0);
-
-
-	LiftingTransform<WVLT, BC>::inverse_adjoint(v_s, v_d);
-	interleave(v_s, v_d, v);
-
-	T v2 = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
-
-	EXPECT_NEAR(v1, v2, atol + rtol * std::abs(v2));
-}
-
-TYPED_TEST_P(TestTrasformAndAdjoint, ValidateForInvAdjDot) {
-	// Test that forward and inverse_adjoint work to compute dot products in transformed domain.
-
-	using WVLT = typename TestFixture::WVLT;
-	using T = typename WVLT::type;
-	using BC = typename TestFixture::BC;
-
-	T rtol = 1E-7;
-	T atol = 0;
-
-	constexpr size_t N = TestFixture::N;
-
-	constexpr size_t N_o = N / 2;
-	constexpr size_t N_e = N - N_o;
-
-	std::array<T, N> u;
-	std::array<T, N_e> u_s;
-	std::array<T, N_o> u_d;
-
-	std::array<T, N> v;
-	std::array<T, N_e> v_s;
-	std::array<T, N_o> v_d;
-
-	fill_sin(u, -200, 200);
-	fill_sin(v, -50, 10);
-	deinterleave(u, u_s, u_d);
-	deinterleave(v, v_s, v_d);
-
-	T v1 = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
-
-	LiftingTransform<WVLT, BC>::forward(u_s, u_d);
-	LiftingTransform<WVLT, BC>::inverse_adjoint(v_s, v_d);
-
-	T v2 = std::inner_product(v_s.begin(), v_s.end(), u_s.begin(), 0.0)
-		+ std::inner_product(v_d.begin(), v_d.end(), u_d.begin(), 0.0);
-
-	EXPECT_NEAR(v1, v2, atol + rtol * std::abs(v2));
-}
-
-TYPED_TEST_P(TestTrasformAndAdjoint, ValidateInvForAdjDot) {
-	// Test that inverse and forward_adjoint work to compute dot products in sampled domain.
-
-	using WVLT = typename TestFixture::WVLT;
-	using T = typename WVLT::type;
-	using BC = typename TestFixture::BC;
-
-	T rtol = 1E-7;
-	T atol = 0;
-
-	constexpr size_t N = TestFixture::N;
-
-	constexpr size_t N_o = N / 2;
-	constexpr size_t N_e = N - N_o;
-
-	std::array<T, N> u;
-	std::array<T, N_e> u_s;
-	std::array<T, N_o> u_d;
-
-	std::array<T, N> v;
-	std::array<T, N_e> v_s;
-	std::array<T, N_o> v_d;
-
-	fill_sin(u, -200, 200);
-	fill_sin(v, -50, 10);
-	deinterleave(u, u_s, u_d);
-	deinterleave(v, v_s, v_d);
-
-	T v1 = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
-
-	LiftingTransform<WVLT, BC>::inverse(u_s, u_d);
-	LiftingTransform<WVLT, BC>::forward_adjoint(v_s, v_d);
-
-	T v2 = std::inner_product(v_s.begin(), v_s.end(), u_s.begin(), 0.0)
-		+ std::inner_product(v_d.begin(), v_d.end(), u_d.begin(), 0.0);
-
-	EXPECT_NEAR(v1, v2, atol + rtol * std::abs(v2));
-}
-
-REGISTER_TYPED_TEST_SUITE_P(TestTrasformAndAdjoint,
-	ValidateForwardBackward,
-	ValidateAdjointForwardBackward,
-	ValidateForwardAdjoint,
-	ValidateInverseAdjoint,
-	ValidateForInvAdjDot,
-	ValidateInvForAdjDot,
-	ValidateForwardStrided,
-	ValidateInverseStrided,
-	ValidateForwardAdjointStrided,
-	ValidateInverseAdjointStrided
-);
-
-INSTANTIATE_TYPED_TEST_SUITE_P(PocketWavelets, TestTrasformAndAdjoint, TupleToTypes<WaveletTestMatrix>::type);
+#endif

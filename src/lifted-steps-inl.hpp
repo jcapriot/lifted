@@ -376,189 +376,7 @@ namespace HWY_NAMESPACE {
     template<typename T, size_t N>
     class Step<GenericUpdateStep<T, N>>{
     private:
-        const GenericUpdateStep<T, N>& step_dat;
-        
-        template<TransformType TF>
-        HWY_INLINE void front_bc_loop (
-            const TF tf, const Along axis, const BoundaryCondition bc,
-            const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n1
-        ) const {
-            using OP = op_from_tf_t<TF>;
-            const auto op = OP();
-            if constexpr(AdjointTransform<TF>){
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = step_dat.offset, j = 1 - ptrdiff_t(N); i < 0; ++i, ++j) { \
-                        size_t io = name##Boundary::index_of(i, ny); \
-                        if ((io != ny) && (ptrdiff_t(io) != i)) \
-                            ip::inner_product_safe(op, y[io], step_dat.vals_r, x, j, nx); \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-                for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i)
-                    ip::inner_product(op, ZeroBoundary(), y[i], step_dat.vals_r, step_dat.offset_r, x, i, nx);
-            }else{
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i) \
-                        ip::inner_product(op, name##Boundary(), y[i], step_dat.vals, step_dat.offset, x, i, nx); \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }
-        }
-
-        template<TransformType TF>
-        HWY_INLINE void back_bc_loop (
-            const TF tf, const Along axis, const BoundaryCondition bc,
-            const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n2, const size_t nd
-        ) const {
-            using OP = op_from_tf_t<TF>;
-            const auto op = OP();
-            if constexpr(AdjointTransform<TF>){
-
-                for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i)
-                    ip::inner_product(op, ZeroBoundary(), y[i], step_dat.vals_r, step_dat.offset_r, x, i, nx);
-
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + step_dat.offset_r; i < ptrdiff_t(nx) - step_dat.offset_r; ++i, ++j) { \
-                        size_t io = name##Boundary::index_of(i, ny); \
-                        if ((io != ny) && (ptrdiff_t(io) != i)) \
-                            ip::inner_product_safe(op, y[io], step_dat.vals_r, x, j, nx); \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }else{
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i) \
-                        ip::inner_product(op, name##Boundary(), y[i], step_dat.vals, step_dat.offset, x, i, nx); \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }
-        }
-
-        template<TransformType TF>
-        HWY_INLINE void front_bc_loop (
-            const TF tf, const Across axis, const VecTag<T> dtag, const BoundaryCondition bc,
-            const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n1
-        ) const {
-            using OP = op_from_tf_t<TF>;
-            const auto op = OP();
-            HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
-
-            if constexpr(AdjointTransform<TF>){
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = step_dat.offset, j = 1 - ptrdiff_t(N); i < 0; ++i, ++j) { \
-                        size_t io = name##Boundary::index_of(i, ny); \
-                        if ((io != ny) && (ptrdiff_t(io) != i)){ \
-                            auto yi = hn::Load(dtag, y + io * lanes); \
-                            ip::inner_product_safe(op, dtag, yi, step_dat.vals_r, x, j, nx, lanes); \
-                            hn::Store(yi, dtag, y + io * lanes); \
-                        } \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-                for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){
-                    auto yi = hn::Load(dtag, y + i * lanes);
-                    ip::inner_product(op, ZeroBoundary(), dtag, yi, step_dat.vals_r, step_dat.offset_r, x, i, nx, lanes);
-                    hn::Store(yi, dtag, y + i * lanes);
-                }
-            }else{
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){ \
-                        auto yi = hn::Load(dtag, y + i * lanes); \
-                        ip::inner_product(op, name##Boundary(), dtag, yi, step_dat.vals, step_dat.offset, x, i, nx, lanes); \
-                        hn::Store(yi, dtag, y + i * lanes); \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }
-        }
-
-        template<TransformType TF>
-        HWY_INLINE void back_bc_loop (
-            const TF tf, const Across axis, const VecTag<T> dtag, const BoundaryCondition bc,
-            const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n2, const size_t nd
-        ) const {
-            using OP = op_from_tf_t<TF>;
-            const auto op = OP();
-
-            HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
-
-            if constexpr(AdjointTransform<TF>){
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + step_dat.offset_r; i < ptrdiff_t(nx) -step_dat.offset_r; ++i, ++j) { \
-                        size_t io = name##Boundary::index_of(i, ny); \
-                        if ((io != ny) && (ptrdiff_t(io) != i)){ \
-                            auto yi = hn::Load(dtag, y + io * lanes); \
-                            ip::inner_product_safe(op, dtag, yi, step_dat.vals_r, x, j, nx, lanes); \
-                            hn::Store(yi, dtag, y + io * lanes); \
-                        } \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-                for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){
-                    auto yi = hn::Load(dtag, y + i * lanes);
-                    ip::inner_product(op, ZeroBoundary(), dtag, yi, step_dat.vals_r, step_dat.offset_r, x, i, nx, lanes);
-                    hn::Store(yi, dtag, y + i * lanes);
-                }
-            }else{
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){ \
-                        auto yi = hn::Load(dtag, y + i * lanes); \
-                        ip::inner_product(op, name##Boundary(), dtag, yi, step_dat.vals, step_dat.offset, x, i, nx, lanes); \
-                        hn::Store(yi, dtag, y + i * lanes); \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }
-        }
-    
+        const GenericUpdateStep<T, N>& step_dat;    
     public:
         constexpr Step(const GenericUpdateStep<T, N>& step_dat_) : step_dat(step_dat_) {};
  
@@ -594,7 +412,38 @@ namespace HWY_NAMESPACE {
             const VecTag<T> dtag;
             HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
 
-            front_bc_loop(tf, axis, bc, x, y, nx, ny, n1);
+            
+            if constexpr(!is_normal){
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = step_dat.offset, j = 1 - ptrdiff_t(N); i < 0; ++i, ++j) { \
+                        size_t io = name##Boundary::index_of(i, ny); \
+                        if ((io != ny) && (ptrdiff_t(io) != i)) \
+                            ip::inner_product_safe(op, y[io], vs, x, j, nx); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+                for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i)
+                    ip::inner_product(op, ZeroBoundary(), y[i], vs, off, x, i, nx);
+            }else{
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i) \
+                        ip::inner_product(op, name##Boundary(), y[i], vs, off, x, i, nx); \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }
+
             size_t k = n1;
             const size_t count = (n2 > n1)? n2 - n1: 0;
             if (count >= lanes){
@@ -613,7 +462,39 @@ namespace HWY_NAMESPACE {
                 hn::StoreN(yi, dtag, y + k, rem);
             }
 
-            back_bc_loop(tf, axis, bc, x, y, nx, ny, n2, nd);
+            
+            if constexpr(!is_normal){
+
+                for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i)
+                    ip::inner_product(op, ZeroBoundary(), y[i], vs, off, x, i, nx);
+
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + off; i < ptrdiff_t(nx) - off; ++i, ++j) { \
+                        size_t io = name##Boundary::index_of(i, ny); \
+                        if ((io != ny) && (ptrdiff_t(io) != i)) \
+                            ip::inner_product_safe(op, y[io], vs, x, j, nx); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }else{
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i) \
+                        ip::inner_product(op, name##Boundary(), y[i], vs, off, x, i, nx); \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }
 		}
 
         template<TransformType TF>
@@ -645,14 +526,92 @@ namespace HWY_NAMESPACE {
             const VecTag<T> dtag;
             HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
 
-            front_bc_loop(tf, axis, dtag, bc, x, y, nx, ny, n1);
+            if constexpr(!is_normal){
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = step_dat.offset, j = 1 - ptrdiff_t(N); i < 0; ++i, ++j) { \
+                        size_t io = name##Boundary::index_of(i, ny); \
+                        if ((io != ny) && (ptrdiff_t(io) != i)){ \
+                            auto yi = hn::Load(dtag, y + io * lanes); \
+                            ip::inner_product_safe(op, dtag, yi, vs, x, j, nx, lanes); \
+                            hn::Store(yi, dtag, y + io * lanes); \
+                        } \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+                for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){
+                    auto yi = hn::Load(dtag, y + i * lanes);
+                    ip::inner_product(op, ZeroBoundary(), dtag, yi, vs, off, x, i, nx, lanes);
+                    hn::Store(yi, dtag, y + i * lanes);
+                }
+            }else{
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){ \
+                        auto yi = hn::Load(dtag, y + i * lanes); \
+                        ip::inner_product(op, name##Boundary(), dtag, yi, vs, off, x, i, nx, lanes); \
+                        hn::Store(yi, dtag, y + i * lanes); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }
 
             for (size_t i = n1; i < n2; ++i){
                 auto yi = hn::Load(dtag, y + i * lanes);
                 ip::inner_product(op, dtag, yi, vs, off, x, i, lanes);
                 hn::Store(yi, dtag, y + i * lanes);
             }
-            back_bc_loop(tf, axis, dtag, bc, x, y, nx, ny, n2, nd);
+
+            //back bc loop
+            if constexpr(!is_normal){
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + off; i < ptrdiff_t(nx) - off; ++i, ++j) { \
+                        size_t io = name##Boundary::index_of(i, ny); \
+                        if ((io != ny) && (ptrdiff_t(io) != i)){ \
+                            auto yi = hn::Load(dtag, y + io * lanes); \
+                            ip::inner_product_safe(op, dtag, yi, vs, x, j, nx, lanes); \
+                            hn::Store(yi, dtag, y + io * lanes); \
+                        } \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+                for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){
+                    auto yi = hn::Load(dtag, y + i * lanes);
+                    ip::inner_product(op, ZeroBoundary(), dtag, yi, vs, off, x, i, nx, lanes);
+                    hn::Store(yi, dtag, y + i * lanes);
+                }
+            }else{
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){ \
+                        auto yi = hn::Load(dtag, y + i * lanes); \
+                        ip::inner_product(op, name##Boundary(), dtag, yi, vs, off, x, i, nx, lanes); \
+                        hn::Store(yi, dtag, y + i * lanes); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }
 		}
     };
 
@@ -666,213 +625,6 @@ namespace HWY_NAMESPACE {
         template<TransformType TF>
         using unit_op_from_tf_t = std::conditional_t<ForwardTransform<TF>, unit_op, typename unit_op::Reverse>;
 
-        template<TransformType TF>
-        HWY_INLINE void front_bc_loop (
-            const TF tf, const Along axis, const BoundaryCondition bc,
-            const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n1
-        ) const {
-            using OP = unit_op_from_tf_t<TF>;
-
-            if constexpr(AdjointTransform<TF>){
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = step_dat.offset, j = 0; (i < 0) && (j < ptrdiff_t(nx)); ++i, ++j) { \
-                        size_t io = name##Boundary::index_of(i, ny); \
-                        if ((io != ny) && (ptrdiff_t(io) != i)) \
-                            OP::iop(y[io], x[j]); \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-                for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){
-                    const size_t i_bc = ZeroBoundary::index_of(i + step_dat.offset_r, nx);
-                    if(i_bc < nx) OP::iop(y[i], x[i_bc]);
-                }
-            }else{
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){ \
-                        const size_t i_bc = name##Boundary::index_of(i + step_dat.offset, nx); \
-                        if(i_bc < nx) OP::iop(y[i], x[i_bc]); \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }
-        }
-
-        template<TransformType TF>
-        HWY_INLINE void back_bc_loop (
-            const TF tf, const Along axis, const BoundaryCondition bc,
-            const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n2, const size_t nd
-        ) const {
-            using OP = unit_op_from_tf_t<TF>;
-            const auto op = OP();
-            if constexpr(AdjointTransform<TF>){
-
-                for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){
-                    const size_t i_bc = ZeroBoundary::index_of(i + step_dat.offset_r, nx);
-                    if(i_bc < nx) OP::iop(y[i], x[i_bc]);
-                }
-
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + step_dat.offset_r; i < ptrdiff_t(nx) - step_dat.offset_r; ++i, ++j)  { \
-                        size_t io = name##Boundary::index_of(i, ny); \
-                        if ((io != ny) && (ptrdiff_t(io) != i)) \
-                            OP::iop(y[io], x[j]); \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }else{
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){ \
-                        const size_t i_bc = name##Boundary::index_of(i + step_dat.offset, nx); \
-                        if(i_bc < nx) OP::iop(y[i], x[i_bc]); \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }
-        }
-
-        template<TransformType TF>
-        HWY_INLINE void front_bc_loop (
-            const TF tf, const Across axis, const VecTag<T> dtag, const BoundaryCondition bc,
-            const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n1
-        ) const {
-            using OP = unit_op_from_tf_t<TF>;
-            const auto op = OP();
-            HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
-
-            if constexpr(AdjointTransform<TF>){
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = step_dat.offset, j = 0; (i < 0) && (j < ptrdiff_t(nx)); ++i, ++j)  { \
-                        size_t io = name##Boundary::index_of(i, ny); \
-                        if ((io != ny) && (ptrdiff_t(io) != i)){ \
-                            auto yi = hn::Load(dtag, y + io * lanes); \
-                            const auto xi = hn::Load(dtag, x + j * lanes); \
-                            OP::iop_v(yi, xi); \
-                            hn::Store(yi, dtag, y + io * lanes); \
-                        } \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-                for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){
-                    const size_t i_bc = ZeroBoundary::index_of(i + step_dat.offset_r, nx);
-                    if(i_bc < nx){
-                        auto yi = hn::Load(dtag, y + i * lanes);
-                        auto xi = hn::Load(dtag, x + (i_bc + step_dat.offset_r) * lanes);
-                        OP::iop_v(yi, xi);
-                        hn::Store(yi, dtag, y + i * lanes);
-                    }
-                }
-            }else{
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){ \
-                        const size_t i_bc = name##Boundary::index_of(i + step_dat.offset, nx); \
-                        if(i_bc < nx){ \
-                            auto yi = hn::Load(dtag, y + i * lanes); \
-                            auto xi = hn::Load(dtag, x + (i_bc + step_dat.offset) * lanes); \
-                            OP::iop_v(yi, xi); \
-                            hn::Store(yi, dtag, y + i * lanes); \
-                        } \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }
-        }
-
-        template<TransformType TF>
-        HWY_INLINE void back_bc_loop (
-            const TF tf, const Across axis, const VecTag<T> dtag, const BoundaryCondition bc,
-            const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n2, const size_t nd
-        ) const {
-            using OP = unit_op_from_tf_t<TF>;
-            const auto op = OP();
-
-            HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
-
-            if constexpr(AdjointTransform<TF>){
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + step_dat.offset_r; i < ptrdiff_t(nx) - step_dat.offset_r; ++i, ++j) { \
-                        size_t io = name##Boundary::index_of(i, ny); \
-                        if ((io != ny) && (ptrdiff_t(io) != i)){ \
-                            auto yi = hn::Load(dtag, y + io * lanes); \
-                            const auto xi = hn::Load(dtag, x + j * lanes); \
-                            OP::iop_v(yi, xi); \
-                            hn::Store(yi, dtag, y + io * lanes); \
-                        } \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-                for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){
-                    const size_t i_bc = ZeroBoundary::index_of(i + step_dat.offset_r, nx);
-                    if(i_bc < nx){
-                        auto yi = hn::Load(dtag, y + i * lanes);
-                        auto xi = hn::Load(dtag, x + (i_bc + step_dat.offset_r) * lanes);
-                        OP::iop_v(yi, xi);
-                        hn::Store(yi, dtag, y + i * lanes);
-                    }
-                }
-            }else{
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){ \
-                        const size_t i_bc = name##Boundary::index_of(i + step_dat.offset, nx); \
-                        if(i_bc < nx){ \
-                            auto yi = hn::Load(dtag, y + i * lanes); \
-                            auto xi = hn::Load(dtag, x + (i_bc + step_dat.offset) * lanes); \
-                            OP::iop_v(yi, xi); \
-                            hn::Store(yi, dtag, y + i * lanes); \
-                        } \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }
-        }
-    
     public:
 
         constexpr Step(const UnitUpdateStep<T, PM>& step_dat_) : step_dat(step_dat_){}
@@ -904,7 +656,40 @@ namespace HWY_NAMESPACE {
             const VecTag<T> dtag;
             HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
 
-            front_bc_loop(tf, axis, bc, x, y, nx, ny, n1);
+            if constexpr(!is_normal){
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = step_dat.offset, j = 0; (i < 0) && (j < ptrdiff_t(nx)); ++i, ++j) { \
+                        size_t io = name##Boundary::index_of(i, ny); \
+                        if ((io != ny) && (ptrdiff_t(io) != i)) \
+                            OP::iop(y[io], x[j]); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+                for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){
+                    const size_t i_bc = ZeroBoundary::index_of(i + off, nx);
+                    if(i_bc < nx) OP::iop(y[i], x[i_bc]);
+                }
+            }else{
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){ \
+                        const size_t i_bc = name##Boundary::index_of(i + off, nx); \
+                        if(i_bc < nx) OP::iop(y[i], x[i_bc]); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }
 
             size_t k = n1;
             const size_t count = (n2 > n1)? n2 - n1: 0;
@@ -927,7 +712,42 @@ namespace HWY_NAMESPACE {
                 hn::StoreN(yi, dtag, y + k, rem);
             }
 
-            back_bc_loop(tf, axis, bc, x, y, nx, ny, n2, nd);
+            if constexpr(!is_normal){
+
+                for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){
+                    const size_t i_bc = ZeroBoundary::index_of(i + off, nx);
+                    if(i_bc < nx) OP::iop(y[i], x[i_bc]);
+                }
+
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + off; i < ptrdiff_t(nx) - off; ++i, ++j)  { \
+                        size_t io = name##Boundary::index_of(i, ny); \
+                        if ((io != ny) && (ptrdiff_t(io) != i)) \
+                            OP::iop(y[io], x[j]); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }else{
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){ \
+                        const size_t i_bc = name##Boundary::index_of(i + off, nx); \
+                        if(i_bc < nx) OP::iop(y[i], x[i_bc]); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }
 		}
 
 
@@ -958,127 +778,16 @@ namespace HWY_NAMESPACE {
             const VecTag<T> dtag;
             HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
 
-            front_bc_loop(tf, axis, dtag, bc, x, y, nx, ny, n1);
-
-            for (size_t i = n1; i < n2; ++i){
-                auto yi = hn::Load(dtag, y + i * lanes);
-                auto xi = hn::Load(dtag, x + (i + off) * lanes);
-                OP::iop_v(yi, xi);
-                hn::Store(yi, dtag, y + i * lanes);
-            }
-
-            back_bc_loop(tf, axis, dtag, bc, x, y, nx, ny, n2, nd);
-		}
-    };
-
-    template<typename T, size_t N, UpdateOperation PM>
-	class Step<RepeatUpdateStep<T, N, PM>>{
-    private:
-        const RepeatUpdateStep<T, N, PM>& step_dat;
-
-        using unit_op = std::conditional_t<PM == UpdateOperation::add, IAdd, ISub>;
-
-        template<TransformType TF>
-        using unit_op_from_tf_t = std::conditional_t<ForwardTransform<TF>, unit_op, typename unit_op::Reverse>;
-
-        template<TransformType TF>
-        HWY_INLINE void front_bc_loop (
-            const TF tf, const Along axis, const BoundaryCondition bc,
-            const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n1
-        ) const {
-            using OP = op_from_tf_t<TF>;
-            const auto op = OP();
-            if constexpr(AdjointTransform<TF>){
+            if constexpr(!is_normal){
                 switch(bc){
                     #define X(name, value) \
                     case BoundaryCondition::name : \
-                    for (ptrdiff_t i = step_dat.offset, j = 1 - ptrdiff_t(N); i < 0; ++i, ++j) { \
-                        size_t io = name##Boundary::index_of(i, ny); \
-                        if ((io != ny) && (ptrdiff_t(io) != i)) \
-                            ip::inner_product_safe<N>(op, y[io], step_dat.val, x, j, nx); \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-                for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i)
-                    ip::inner_product<N>(op, ZeroBoundary(), y[i], step_dat.val, step_dat.offset_r, x, i, nx);
-            }else{
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i) \
-                        ip::inner_product<N>(op, name##Boundary(), y[i], step_dat.val, step_dat.offset, x, i, nx); \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }
-        }
-
-        template<TransformType TF>
-        HWY_INLINE void back_bc_loop (
-            const TF tf, const Along axis, const BoundaryCondition bc,
-            const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n2, const size_t nd
-        ) const {
-            using OP = op_from_tf_t<TF>;
-            const auto op = OP();
-            if constexpr(AdjointTransform<TF>){
-
-                for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i)
-                    ip::inner_product<N>(op, ZeroBoundary(), y[i], step_dat.val, step_dat.offset_r, x, i, nx);
-
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + step_dat.offset_r; i < ptrdiff_t(nx) - step_dat.offset_r; ++i, ++j) { \
-                        size_t io = name##Boundary::index_of(i, ny); \
-                        if ((io != ny) && (ptrdiff_t(io) != i)) \
-                            ip::inner_product_safe<N>(op, y[io], step_dat.val, x, j, nx); \
-                    } \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }else{
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i) \
-                        ip::inner_product<N>(op, name##Boundary(), y[i], step_dat.val, step_dat.offset, x, i, nx); \
-                    break;
-                    LIFTED_BOUNDARY_CONDITIONS
-                    #undef X
-                    default:
-                    throw std::invalid_argument("Unknown Boundary Condition");
-                }
-            }
-        }
-
-        template<TransformType TF>
-        HWY_INLINE void front_bc_loop (
-            const TF tf, const Across axis, const VecTag<T> dtag, const BoundaryCondition bc,
-            const VecType<T>& v, const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n1
-        ) const {
-            using OP = op_from_tf_t<TF>;
-            const auto op = OP();
-            HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
-
-            if constexpr(AdjointTransform<TF>){
-                switch(bc){
-                    #define X(name, value) \
-                    case BoundaryCondition::name : \
-                    for (ptrdiff_t i = step_dat.offset, j = 1 - ptrdiff_t(N); i < 0; ++i, ++j) { \
+                    for (ptrdiff_t i = step_dat.offset, j = 0; (i < 0) && (j < ptrdiff_t(nx)); ++i, ++j)  { \
                         size_t io = name##Boundary::index_of(i, ny); \
                         if ((io != ny) && (ptrdiff_t(io) != i)){ \
                             auto yi = hn::Load(dtag, y + io * lanes); \
-                            ip::inner_product_safe<N>(op, dtag, yi, v, x, j, nx, lanes); \
+                            const auto xi = hn::Load(dtag, x + j * lanes); \
+                            OP::iop_v(yi, xi); \
                             hn::Store(yi, dtag, y + io * lanes); \
                         } \
                     } \
@@ -1089,18 +798,26 @@ namespace HWY_NAMESPACE {
                     throw std::invalid_argument("Unknown Boundary Condition");
                 }
                 for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){
-                    auto yi = hn::Load(dtag, y + i * lanes);
-                    ip::inner_product<N>(op, ZeroBoundary(), dtag, yi, v, step_dat.offset_r, x, i, nx, lanes);
-                    hn::Store(yi, dtag, y + i * lanes);
+                    const size_t i_bc = ZeroBoundary::index_of(i + off, nx);
+                    if(i_bc < nx){
+                        auto yi = hn::Load(dtag, y + i * lanes);
+                        auto xi = hn::Load(dtag, x + i_bc * lanes);
+                        OP::iop_v(yi, xi);
+                        hn::Store(yi, dtag, y + i * lanes);
+                    }
                 }
             }else{
                 switch(bc){
                     #define X(name, value) \
                     case BoundaryCondition::name : \
                     for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){ \
-                        auto yi = hn::Load(dtag, y + i * lanes); \
-                        ip::inner_product<N>(op, name##Boundary(), dtag, yi, v, step_dat.offset, x, i, nx, lanes); \
-                        hn::Store(yi, dtag, y + i * lanes); \
+                        const size_t i_bc = name##Boundary::index_of(i + off, nx); \
+                        if(i_bc < nx){ \
+                            auto yi = hn::Load(dtag, y + i * lanes); \
+                            auto xi = hn::Load(dtag, x + i_bc * lanes); \
+                            OP::iop_v(yi, xi); \
+                            hn::Store(yi, dtag, y + i * lanes); \
+                        } \
                     } \
                     break;
                     LIFTED_BOUNDARY_CONDITIONS
@@ -1109,27 +826,24 @@ namespace HWY_NAMESPACE {
                     throw std::invalid_argument("Unknown Boundary Condition");
                 }
             }
-        }
 
-        template<TransformType TF>
-        HWY_INLINE void back_bc_loop (
-            const TF tf, const Across axis, const VecTag<T> dtag, const BoundaryCondition bc,
-            const VecType<T>& v, const T* HWY_RESTRICT x, T* HWY_RESTRICT y, const size_t nx, const size_t ny, const size_t n2, const size_t nd
-        ) const {
-            using OP = op_from_tf_t<TF>;
-            const auto op = OP();
+            for (size_t i = n1; i < n2; ++i){
+                auto yi = hn::Load(dtag, y + i * lanes);
+                auto xi = hn::Load(dtag, x + (i + off) * lanes);
+                OP::iop_v(yi, xi);
+                hn::Store(yi, dtag, y + i * lanes);
+            }
 
-            HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
-
-            if constexpr(AdjointTransform<TF>){
+            if constexpr(!is_normal){
                 switch(bc){
                     #define X(name, value) \
                     case BoundaryCondition::name : \
-                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + step_dat.offset_r; i < ptrdiff_t(nx) -step_dat.offset_r; ++i, ++j) { \
+                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + off; i < ptrdiff_t(nx) - off; ++i, ++j) { \
                         size_t io = name##Boundary::index_of(i, ny); \
                         if ((io != ny) && (ptrdiff_t(io) != i)){ \
                             auto yi = hn::Load(dtag, y + io * lanes); \
-                            ip::inner_product_safe<N>(op, dtag, yi, v, x, j, nx, lanes); \
+                            const auto xi = hn::Load(dtag, x + j * lanes); \
+                            OP::iop_v(yi, xi); \
                             hn::Store(yi, dtag, y + io * lanes); \
                         } \
                     } \
@@ -1140,18 +854,26 @@ namespace HWY_NAMESPACE {
                     throw std::invalid_argument("Unknown Boundary Condition");
                 }
                 for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){
-                    auto yi = hn::Load(dtag, y + i * lanes);
-                    ip::inner_product<N>(op, ZeroBoundary(), dtag, yi, v, step_dat.offset_r, x, i, nx, lanes);
-                    hn::Store(yi, dtag, y + i * lanes);
+                    const size_t i_bc = ZeroBoundary::index_of(i + off, nx);
+                    if(i_bc < nx){
+                        auto yi = hn::Load(dtag, y + i * lanes);
+                        auto xi = hn::Load(dtag, x + i_bc * lanes);
+                        OP::iop_v(yi, xi);
+                        hn::Store(yi, dtag, y + i * lanes);
+                    }
                 }
             }else{
                 switch(bc){
                     #define X(name, value) \
                     case BoundaryCondition::name : \
                     for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){ \
-                        auto yi = hn::Load(dtag, y + i * lanes); \
-                        ip::inner_product<N>(op, name##Boundary(), dtag, yi, v, step_dat.offset, x, i, nx, lanes); \
-                        hn::Store(yi, dtag, y + i * lanes); \
+                        const size_t i_bc = name##Boundary::index_of(i + off, nx); \
+                        if(i_bc < nx){ \
+                            auto yi = hn::Load(dtag, y + i * lanes); \
+                            auto xi = hn::Load(dtag, x + i_bc * lanes); \
+                            OP::iop_v(yi, xi); \
+                            hn::Store(yi, dtag, y + i * lanes); \
+                        } \
                     } \
                     break;
                     LIFTED_BOUNDARY_CONDITIONS
@@ -1160,11 +882,17 @@ namespace HWY_NAMESPACE {
                     throw std::invalid_argument("Unknown Boundary Condition");
                 }
             }
-        }
+		}
+    };
+
+    template<typename T, size_t N>
+	class Step<RepeatUpdateStep<T, N>>{
+    private:
+        const RepeatUpdateStep<T, N>& step_dat;
 
     public:
 
-        constexpr Step(const RepeatUpdateStep<T, N, PM>& step_dat_) : step_dat(step_dat_){};
+        constexpr Step(const RepeatUpdateStep<T, N>& step_dat_) : step_dat(step_dat_){};
         
         template<TransformType TF>
         void operator()(
@@ -1193,8 +921,37 @@ namespace HWY_NAMESPACE {
 
             const VecTag<T> dtag;
             HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
-
-            front_bc_loop(tf, axis, bc, x, y, nx, ny, n1);
+        
+            if constexpr(!is_normal){
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = step_dat.offset, j = 1 - ptrdiff_t(N); i < 0; ++i, ++j) { \
+                        size_t io = name##Boundary::index_of(i, ny); \
+                        if ((io != ny) && (ptrdiff_t(io) != i)) \
+                            ip::inner_product_safe<N>(op, y[io], step_dat.val, x, j, nx); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+                for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i)
+                    ip::inner_product<N>(op, ZeroBoundary(), y[i], step_dat.val, off, x, i, nx);
+            }else{
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i) \
+                        ip::inner_product<N>(op, name##Boundary(), y[i], step_dat.val, off, x, i, nx); \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }
 
             const auto vv = hn::Set(dtag, step_dat.val);
 
@@ -1217,7 +974,38 @@ namespace HWY_NAMESPACE {
                 hn::StoreN(yi, dtag, y + k, rem);
             }
 
-            back_bc_loop(tf, axis, bc, x, y, nx, ny, n2, nd);
+            if constexpr(!is_normal){
+
+                for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i)
+                    ip::inner_product<N>(op, ZeroBoundary(), y[i], step_dat.val, off, x, i, nx);
+
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + off; i < ptrdiff_t(nx) - off; ++i, ++j) { \
+                        size_t io = name##Boundary::index_of(i, ny); \
+                        if ((io != ny) && (ptrdiff_t(io) != i)) \
+                            ip::inner_product_safe<N>(op, y[io], step_dat.val, x, j, nx); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }else{
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i) \
+                        ip::inner_product<N>(op, name##Boundary(), y[i], step_dat.val, off, x, i, nx); \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }
 		}
 
         template<TransformType TF>
@@ -1248,17 +1036,93 @@ namespace HWY_NAMESPACE {
             const VecTag<T> dtag;
             HWY_LANES_CONSTEXPR size_t lanes = hn::Lanes(dtag);
 
-            const auto vv = hn::Set(dtag, step_dat.val);
+            const auto v = hn::Set(dtag, step_dat.val);
 
-            front_bc_loop(tf, axis, dtag, bc, vv, x, y, nx, ny, n1);
+            if constexpr(!is_normal){
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = step_dat.offset, j = 1 - ptrdiff_t(N); i < 0; ++i, ++j) { \
+                        size_t io = name##Boundary::index_of(i, ny); \
+                        if ((io != ny) && (ptrdiff_t(io) != i)){ \
+                            auto yi = hn::Load(dtag, y + io * lanes); \
+                            ip::inner_product_safe<N>(op, dtag, yi, v, x, j, nx, lanes); \
+                            hn::Store(yi, dtag, y + io * lanes); \
+                        } \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+                for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){
+                    auto yi = hn::Load(dtag, y + i * lanes);
+                    ip::inner_product<N>(op, ZeroBoundary(), dtag, yi, v, off, x, i, nx, lanes);
+                    hn::Store(yi, dtag, y + i * lanes);
+                }
+            }else{
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = 0; i < ptrdiff_t(n1); ++i){ \
+                        auto yi = hn::Load(dtag, y + i * lanes); \
+                        ip::inner_product<N>(op, name##Boundary(), dtag, yi, v, off, x, i, nx, lanes); \
+                        hn::Store(yi, dtag, y + i * lanes); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }
 
             for (size_t i = n1; i < n2; ++i){
                 auto yi = hn::Load(dtag, y + i * lanes);
-                ip::inner_product<N>(op, dtag, yi, vv, off, x, i, lanes);
+                ip::inner_product<N>(op, dtag, yi, v, off, x, i, lanes);
                 hn::Store(yi, dtag, y + i * lanes);
             }
 
-            back_bc_loop(tf, axis, dtag, bc, vv, x, y, nx, ny, n2, nd);
+            if constexpr(!is_normal){
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = nd, j = ptrdiff_t(nd) + off; i < ptrdiff_t(nx) -off; ++i, ++j) { \
+                        size_t io = name##Boundary::index_of(i, ny); \
+                        if ((io != ny) && (ptrdiff_t(io) != i)){ \
+                            auto yi = hn::Load(dtag, y + io * lanes); \
+                            ip::inner_product_safe<N>(op, dtag, yi, v, x, j, nx, lanes); \
+                            hn::Store(yi, dtag, y + io * lanes); \
+                        } \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+                for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){
+                    auto yi = hn::Load(dtag, y + i * lanes);
+                    ip::inner_product<N>(op, ZeroBoundary(), dtag, yi, v, off, x, i, nx, lanes);
+                    hn::Store(yi, dtag, y + i * lanes);
+                }
+            }else{
+                switch(bc){
+                    #define X(name, value) \
+                    case BoundaryCondition::name : \
+                    for (ptrdiff_t i = n2; i < ptrdiff_t(ny); ++i){ \
+                        auto yi = hn::Load(dtag, y + i * lanes); \
+                        ip::inner_product<N>(op, name##Boundary(), dtag, yi, v, off, x, i, nx, lanes); \
+                        hn::Store(yi, dtag, y + i * lanes); \
+                    } \
+                    break;
+                    LIFTED_BOUNDARY_CONDITIONS
+                    #undef X
+                    default:
+                    throw std::invalid_argument("Unknown Boundary Condition");
+                }
+            }
 		}
     };
 
@@ -1347,8 +1211,8 @@ namespace HWY_NAMESPACE {
     template<typename T, UpdateOperation PM>
     Step(UnitUpdateStep<T, PM>) -> Step<UnitUpdateStep<T, PM>>;
 
-    template<typename T, size_t N, UpdateOperation PM>
-	Step(RepeatUpdateStep<T, N, PM>) -> Step<RepeatUpdateStep<T, N, PM>>;
+    template<typename T, size_t N>
+	Step(RepeatUpdateStep<T, N>) -> Step<RepeatUpdateStep<T, N>>;
 
     template<typename T>
     Step(ScaleStep<T>) -> Step<ScaleStep<T>>;

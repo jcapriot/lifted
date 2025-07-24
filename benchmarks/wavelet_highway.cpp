@@ -15,15 +15,18 @@
 
 HWY_BEFORE_NAMESPACE();
 namespace hwy {
-#if HWY_TARGET >= HWY_AVX2
 namespace HWY_NAMESPACE {
-    namespace lftv = lifted::HWY_NAMESPACE;
+    using lifted::detail::HWY_NAMESPACE::FixedTransform;
 
     template<typename T>
     static void BM_Daubechies3Forward(benchmark::State& state) {
-        using WVLT = lftv::Daubechies3<T>;
-        using BC = lifted::ZeroBoundary;
-        using DIR = lifted::detail::Along;
+        using WVLT = lifted::Daubechies3<T>;
+        using FOR = lifted::detail::Forward;
+        using INV = lifted::detail::Inverse;
+        using AXIS = lifted::detail::Along;
+
+        constexpr static auto transform = FixedTransform<WVLT>();
+        const static auto bc = lifted::BoundaryCondition::Zero;
 
         const size_t n = 100000 * 16;
 
@@ -37,16 +40,20 @@ namespace HWY_NAMESPACE {
         std::iota(d.get(), d.get() + nd, T(0.0));
 
         for (auto _ : state){
-            WVLT::forward(DIR(), BC(), s.get(), d.get(), ns, nd);
-            WVLT::inverse(DIR(), BC(), s.get(), d.get(), ns, nd);
+            transform.apply(FOR(), AXIS(), bc, s.get(), d.get(), ns, nd);
+            transform.apply(INV(), AXIS(), bc, s.get(), d.get(), ns, nd);
         }
     }
 
     template<typename T>
     static void BM_Daubechies3ForwardVec(benchmark::State& state) {
-        using WVLT = lftv::Daubechies3<T>;
-        using BC = lifted::ZeroBoundary;
-        using DIR = lifted::detail::Across;
+        using WVLT = lifted::Daubechies3<T>;
+        using FOR = lifted::detail::Forward;
+        using INV = lifted::detail::Inverse;
+        using AXIS = lifted::detail::Across;
+
+        constexpr static auto transform = FixedTransform<WVLT>();
+        const static auto bc = lifted::BoundaryCondition::Zero;
 
         const ScalableTag<T> dtag;
 
@@ -64,8 +71,8 @@ namespace HWY_NAMESPACE {
         std::iota(d.get(), d.get() + nd * lanes, T(0.0));
 
         for (auto _ : state){
-            WVLT::forward(DIR(), BC(), s.get(), d.get(), ns, nd);
-            WVLT::inverse(DIR(), BC(), s.get(), d.get(), ns, nd);
+            transform.apply(FOR(), AXIS(), bc, s.get(), d.get(), ns, nd);
+            transform.apply(INV(), AXIS(), bc, s.get(), d.get(), ns, nd);
         }
     }
 
@@ -92,7 +99,6 @@ BENCHMARK(BM_Daubechies3ForwardVec<float>)->Name(get_forward_name<float>(true));
 BENCHMARK(BM_Daubechies3Forward<double>)->Name(get_forward_name<double>(false));
 BENCHMARK(BM_Daubechies3ForwardVec<double>)->Name(get_forward_name<double>(true));
 }
-#endif
 }
 HWY_AFTER_NAMESPACE();
 

@@ -9,7 +9,13 @@
 #include <functional>
 #include <type_traits>
 
-#include "ndarray.hpp" // For threading currently, want to switch to highway's threading to reduce code bloat here.
+#include <mutex>
+#include <condition_variable>
+#include <thread>
+#include <queue>
+#include <atomic>
+#include <functional>
+#include <new>
 
 // Reserved:
 //    0 : Lazy Wavelet (Just a deinterleave operation)
@@ -117,8 +123,6 @@ enum class Transform : std::uint32_t {
 namespace detail {
     using std::array;
     using std::vector;
-    
-    namespace threading = ndarray::detail::threading;
 
     template<typename To, typename... From>
     concept AllConvertible = (std::convertible_to<From, To> && ...);
@@ -131,6 +135,346 @@ namespace detail {
             res *= sz;
         return res;
     }
+
+    namespace threading {
+
+#ifdef _MSC_VER
+
+inline void* aligned_alloc(size_t align, size_t size) {
+    void* ptr = _aligned_malloc(size, align);
+	if (!ptr) throw std::bad_alloc();
+	return ptr;
+}
+
+inline void aligned_dealloc(void* ptr) {
+	if (ptr) _aligned_free(ptr);
+}
+#else
+inline void* aligned_alloc(size_t align, size_t size)
+{
+	align = std::max(align, alignof(max_align_t));
+	void* ptr = malloc(size + align);
+	if (!ptr) throw std::bad_alloc();
+	void* res = reinterpret_cast<void*>
+		((reinterpret_cast<uintptr_t>(ptr) & ~(uintptr_t(align - 1))) + uintptr_t(align));
+	(reinterpret_cast<void**>(res))[-1] = ptr;
+	return res;
+	}
+
+inline void aligned_dealloc(void* ptr)
+{
+	if (ptr) free((reinterpret_cast<void**>(ptr))[-1]);
+}
+#endif
+
+    static inline size_t thread_count(size_t nthreads, const size_v& shape,
+        size_t axis, size_t vlen)
+    {
+        if (nthreads == 1) return 1;
+        size_t size = prod(shape);
+        size_t parallel = size / (shape[axis] * vlen);
+        if (shape[axis] < 1000)
+            parallel /= 4;
+        size_t max_threads = nthreads == 0 ?
+            std::thread::hardware_concurrency() : nthreads;
+        return std::max(size_t(1), std::min(parallel, max_threads));
+}
+
+    inline size_t& thread_id()
+    {
+        static thread_local size_t thread_id_ = 0;
+        return thread_id_;
+    }
+    inline size_t& num_threads()
+    {
+        static thread_local size_t num_threads_ = 1;
+        return num_threads_;
+    }
+    static const size_t max_threads = std::max(1u, std::thread::hardware_concurrency());
+
+    class latch
+    {
+        std::atomic<size_t> num_left_;
+        std::mutex mut_;
+        std::condition_variable completed_;
+        using lock_t = std::unique_lock<std::mutex>;
+
+    public:
+        latch(size_t n) : num_left_(n) {}
+
+        void count_down()
+        {
+            lock_t lock(mut_);
+            if (--num_left_)
+                return;
+            completed_.notify_all();
+        }
+
+        void wait()
+        {
+            lock_t lock(mut_);
+            completed_.wait(lock, [this] { return is_ready(); });
+        }
+        bool is_ready() { return num_left_ == 0; }
+    };
+
+    template <typename T> class concurrent_queue
+    {
+        std::queue<T> q_;
+        std::mutex mut_;
+        std::atomic<size_t> size_;
+        using lock_t = std::lock_guard<std::mutex>;
+
+    public:
+
+        void push(T val)
+        {
+            lock_t lock(mut_);
+            ++size_;
+            q_.push(std::move(val));
+        }
+
+        bool try_pop(T& val)
+        {
+            if (size_ == 0) return false;
+            lock_t lock(mut_);
+            // Queue might have been emptied while we acquired the lock
+            if (q_.empty()) return false;
+
+            val = std::move(q_.front());
+            --size_;
+            q_.pop();
+            return true;
+        }
+
+        bool empty() const { return size_ == 0; }
+    };
+
+    // C++ allocator with support for over-aligned types
+    template <typename T> struct aligned_allocator
+    {
+        using value_type = T;
+        template <class U>
+        aligned_allocator(const aligned_allocator<U>&) {}
+        aligned_allocator() = default;
+
+        T* allocate(size_t n)
+        {
+            void* mem = aligned_alloc(alignof(T), n * sizeof(T));
+            return static_cast<T*>(mem);
+        }
+
+        void deallocate(T* p, size_t /*n*/)
+        {
+            aligned_dealloc(p);
+        }
+    };
+
+    class thread_pool
+    {
+        // A reasonable guess, probably close enough for most hardware
+        static constexpr size_t cache_line_size = 64;
+        struct alignas(cache_line_size) worker
+        {
+            std::thread thread;
+            std::condition_variable work_ready;
+            std::mutex mut;
+            std::atomic_flag busy_flag = ATOMIC_FLAG_INIT;
+            std::function<void()> work;
+
+            void worker_main(
+                std::atomic<bool>& shutdown_flag,
+                std::atomic<size_t>& unscheduled_tasks,
+                concurrent_queue<std::function<void()>>& overflow_work)
+            {
+                using lock_t = std::unique_lock<std::mutex>;
+                bool expect_work = true;
+                while (!shutdown_flag || expect_work)
+                {
+                    std::function<void()> local_work;
+                    if (expect_work || unscheduled_tasks == 0)
+                    {
+                        lock_t lock(mut);
+                        // Wait until there is work to be executed
+                        work_ready.wait(lock, [&] { return (work || shutdown_flag); });
+                        local_work.swap(work);
+                        expect_work = false;
+                    }
+
+                    bool marked_busy = false;
+                    if (local_work)
+                    {
+                        marked_busy = true;
+                        local_work();
+                    }
+
+                    if (!overflow_work.empty())
+                    {
+                        if (!marked_busy && busy_flag.test_and_set())
+                        {
+                            expect_work = true;
+                            continue;
+                        }
+                        marked_busy = true;
+
+                        while (overflow_work.try_pop(local_work))
+                        {
+                            --unscheduled_tasks;
+                            local_work();
+                        }
+                    }
+
+                    if (marked_busy) busy_flag.clear();
+                }
+            }
+        };
+
+        concurrent_queue<std::function<void()>> overflow_work_;
+        std::mutex mut_;
+        std::vector<worker, aligned_allocator<worker>> workers_;
+        std::atomic<bool> shutdown_;
+        std::atomic<size_t> unscheduled_tasks_;
+        using lock_t = std::lock_guard<std::mutex>;
+
+        void create_threads()
+        {
+            lock_t lock(mut_);
+            size_t nthreads = workers_.size();
+            for (size_t i = 0; i < nthreads; ++i)
+            {
+                try
+                {
+                    auto* worker = &workers_[i];
+                    worker->busy_flag.clear();
+                    worker->work = nullptr;
+                    worker->thread = std::thread([worker, this]
+                        {
+                            worker->worker_main(shutdown_, unscheduled_tasks_, overflow_work_);
+                        });
+                }
+                catch (...)
+                {
+                    shutdown_locked();
+                    throw;
+                }
+            }
+        }
+
+        void shutdown_locked()
+        {
+            shutdown_ = true;
+            for (auto& worker : workers_)
+                worker.work_ready.notify_all();
+
+            for (auto& worker : workers_)
+                if (worker.thread.joinable())
+                    worker.thread.join();
+        }
+
+    public:
+        explicit thread_pool(size_t nthreads) :
+            workers_(nthreads)
+        {
+            create_threads();
+        }
+
+        thread_pool() : thread_pool(max_threads) {}
+
+        ~thread_pool() { shutdown(); }
+
+        void submit(std::function<void()> work)
+        {
+            lock_t lock(mut_);
+            if (shutdown_)
+                throw std::runtime_error("Work item submitted after shutdown");
+
+            ++unscheduled_tasks_;
+
+            // First check for any idle workers and wake those
+            for (auto& worker : workers_)
+                if (!worker.busy_flag.test_and_set())
+                {
+                    --unscheduled_tasks_;
+                    {
+                        lock_t lock(worker.mut);
+                        worker.work = std::move(work);
+                    }
+                    worker.work_ready.notify_one();
+                    return;
+                }
+
+            // If no workers were idle, push onto the overflow queue for later
+            overflow_work_.push(std::move(work));
+        }
+
+        void shutdown()
+        {
+            lock_t lock(mut_);
+            shutdown_locked();
+        }
+
+        void restart()
+        {
+            shutdown_ = false;
+            create_threads();
+        }
+    };
+
+    inline thread_pool& get_pool()
+    {
+        static thread_pool pool;
+#ifdef LIFTED_PTHREADS
+        static std::once_flag f;
+        std::call_once(f,
+            [] {
+                pthread_atfork(
+                    +[] { get_pool().shutdown(); },  // prepare
+                    +[] { get_pool().restart(); },   // parent
+                    +[] { get_pool().restart(); }    // child
+                );
+            });
+#endif
+
+        return pool;
+    }
+
+    /** Map a function f over nthreads */
+    template <typename Func>
+    void thread_map(size_t nthreads, Func f)
+    {
+        if (nthreads == 0)
+            nthreads = max_threads;
+
+        if (nthreads == 1)
+        {
+            f(); return;
+        }
+
+        auto& pool = get_pool();
+        latch counter(nthreads);
+        std::exception_ptr ex;
+        std::mutex ex_mut;
+        for (size_t i = 0; i < nthreads; ++i)
+        {
+            pool.submit(
+                [&f, &counter, &ex, &ex_mut, i, nthreads] {
+                    thread_id() = i;
+                    num_threads() = nthreads;
+                    try { f(); }
+                    catch (...)
+                    {
+                        std::lock_guard<std::mutex> lock(ex_mut);
+                        ex = std::current_exception();
+                    }
+                    counter.count_down();
+                });
+        }
+        counter.wait();
+        if (ex)
+            std::rethrow_exception(ex);
+    }
+}
+
     
     class arr_info
     {
@@ -560,7 +904,7 @@ namespace detail {
             update_type(sd) {}
     };
 
-    template<typename T, size_t N, UpdateOperation PM=UpdateOperation::add>
+    template<typename T, size_t N>
     class RepeatUpdateStep : protected OffsetData<N>{
 		static_assert(N != 0, "Size must be greater than 0");
         using Base = OffsetData<N>;
@@ -574,7 +918,6 @@ namespace detail {
         using Base::n_back_r;
 
         const static size_t n_vals = N;
-        const static UpdateOperation pm = PM;
         const UpdateType update_type;
         const T val;
 
@@ -589,15 +932,15 @@ namespace detail {
     template<typename T>
     class ScaleStep {
     public:
-        const T d_div;
         const T s_mul;
-        
-        const T d_mul;
         const T s_div;
+    
+        const T d_div;
+        const T d_mul;
 
         using type = T;
 
-		constexpr ScaleStep() : d_div(1), s_mul(1), d_mul(1), s_div(1) {};
+		constexpr ScaleStep() : s_mul(1), s_div(1), d_div(1), d_mul(1) {};
 		
 		template<typename U>
         requires AllConvertible<T, U>
@@ -611,8 +954,8 @@ namespace detail {
         requires AllConvertible<T, U1, U2>
 		constexpr ScaleStep(const U1 s_mul_, const U2 d_div_) :
             s_mul(static_cast<T>(s_mul_)),
-            d_div(static_cast<T>(d_div_)),
             s_div(static_cast<T>(1.0L/s_mul_)),
+            d_div(static_cast<T>(d_div_)),
             d_mul(static_cast<T>(1.0L/d_div_)){};
     };
 
@@ -674,12 +1017,12 @@ namespace detail {
 		return UnitUpdateStep<T, PM>(UpdateType::UpdateOdds, offset);
 	}
 
-    template<typename T, size_t N, UpdateOperation PM, typename U>
+    template<typename T, size_t N, typename U>
 	constexpr auto repeat_update_s(const ptrdiff_t offset, const U val) {
 		return RepeatUpdateStep<T, N>(UpdateType::UpdateEvens, offset, static_cast<T>(val));
 	}
 
-    template<typename T, size_t N, UpdateOperation PM, typename U>
+    template<typename T, size_t N, typename U>
 	constexpr auto repeat_update_d(const ptrdiff_t offset, const U val) {
 		return RepeatUpdateStep<T, N>(UpdateType::UpdateOdds, offset, static_cast<T>(val));
 	}
@@ -726,14 +1069,11 @@ namespace detail {
 
 }
 
+struct SeperableTransform{};
+struct NonSeperableTransform{};
+
 template<typename T>
-concept ConstSizeOrSizeVRef =  
-    std::is_integral_v<std::remove_cvref_t<T>> ||
-    (
-        std::is_lvalue_reference_v<T> &&
-        std::is_same_v<std::remove_cvref_t<T>, size_v> &&
-        std::is_const_v<std::remove_reference_t<T>>
-    );
+concept DimSeperability = std::same_as<T, SeperableTransform> || std::same_as<T, NonSeperableTransform>;
 
 // Boundary Conditions
 using detail::ZeroBoundary;

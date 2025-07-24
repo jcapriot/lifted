@@ -9,18 +9,20 @@ test_inc = include_directories('.')
 test_single_levels = executable(
 	'test_single_levels', 
 	'test_single_levels.cpp',
-	dependencies : [gtest_dep, gtest_main_dep, wavelets_dep],
+	cpp_args:['-DHWY_TEST_STANDALONE=0'],
+	dependencies : [gtest_dep, gtest_main_dep, lifted_hdr_dep, hwy_dep],
 	include_directories : test_inc,
 )
 
-test('Single level forward, inverse, and adjoint validations', test_single_levels)
+test('single_level', test_single_levels)
 
 
 test_dwt = executable(
 	'test_dwt', 
 	'test_dwt.cpp',
-	dependencies : [gtest_dep, gtest_main_dep, wavelets_dep],
+	cpp_args:['-DHWY_TEST_STANDALONE=0'],
+	dependencies : [gtest_dep, gtest_main_dep, lifted_lib_dep, hwy_dep],
 	include_directories : test_inc,
 )
 
-test('Driver validations', test_dwt)
+test('driver', test_dwt)

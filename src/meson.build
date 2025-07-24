@@ -1,13 +1,19 @@
 
-wvlt_inc = include_directories('.')
+lifted_inc = include_directories('.')
 
-wvlt_hdr_sources = files(
-	'ndarray.hpp',
-	'wavelets.hpp'
+lifted_hdr_sources = files(
+	'lifted.hpp',
+	'lifted-common.hpp',
+	'lifted-wavelets.hpp',
+	'lifted-export.hpp',
+	'lifted-inl.hpp',
+	'lifted-drivers-inl.hpp',
+	'lifted-ops-inl.hpp',
+	'lifted-steps-inl.hpp',
 )
 
-wavelets_dep = declare_dependency(
-	include_directories: wvlt_inc
+lifted_hdr_dep = declare_dependency(
+	include_directories: lifted_inc
 )
 
 lifted_sources = files(
@@ -27,6 +33,7 @@ lifted_lib = library(
 	lifted_sources,
 	dependencies: hwy_dep,
 	cpp_args: lib_defines,
+	install: true
 )
 
 complie_with_args = []
@@ -35,7 +42,7 @@ if not_static_build
 endif
 
 lifted_lib_dep = declare_dependency(
-	include_directories: wvlt_inc,
+	include_directories: lifted_inc,
 	link_with: lifted_lib,
 	compile_args: complie_with_args
 )
