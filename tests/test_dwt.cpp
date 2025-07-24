@@ -130,10 +130,10 @@ TEST_P(TestSingleDim, ValidateLWTSeperable){
         detail::deinterleave(in_span, s, d);
 
         // assert the deinterleave did it's job
-        for(int i = 0; i < ns; ++i){
+        for(size_t i = 0; i < ns; ++i){
             ASSERT_EQ(in_span[2 * i], s[i]);
         }
-        for(int i = 0; i < nd; ++i){
+        for(size_t i = 0; i < nd; ++i){
             ASSERT_EQ(in_span[2 * i  + 1], d[i]);
         }
 
@@ -142,10 +142,10 @@ TEST_P(TestSingleDim, ValidateLWTSeperable){
         detail::stack(s, d, out_span);
 
         // assert the stack did it's job
-        for(int i = 0; i < ns; ++i){
+        for(size_t i = 0; i < ns; ++i){
             ASSERT_EQ(out_span[i], s[i]);
         }
-        for(int i = 0; i < nd; ++i){
+        for(size_t i = 0; i < nd; ++i){
             ASSERT_EQ(out_span[ns + i], d[i]);
         }
 
@@ -195,10 +195,10 @@ TEST_P(TestSingleDim, ValidateLWT){
         detail::deinterleave(in_span, s, d);
 
         // assert the deinterleave did it's job
-        for(int i = 0; i < ns; ++i){
+        for(size_t i = 0; i < ns; ++i){
             ASSERT_EQ(in_span[2 * i], s[i]);
         }
-        for(int i = 0; i < nd; ++i){
+        for(size_t i = 0; i < nd; ++i){
             ASSERT_EQ(in_span[2 * i  + 1], d[i]);
         }
 
@@ -206,10 +206,10 @@ TEST_P(TestSingleDim, ValidateLWT){
         detail::stack(s, d, out_span);
 
         // assert the stack did it's job
-        for(int i = 0; i < ns; ++i){
+        for(size_t i = 0; i < ns; ++i){
             ASSERT_EQ(out_span[i], s[i]);
         }
-        for(int i = 0; i < nd; ++i){
+        for(size_t i = 0; i < nd; ++i){
             ASSERT_EQ(out_span[ns + i], d[i]);
         }
 
@@ -350,14 +350,14 @@ TEST_P(TestShapesAndAxes, ValidateLWT) {
             while(it.remaining() > 0){
                 it.advance(1);
                 // copy in
-                for(int i=0; i<len; ++i) x[i] = ain[it.iofs(i)];
+                for(size_t i=0; i<len; ++i) x[i] = ain[it.iofs(i)];
 
                 detail::deinterleave(x, s, d);
                 transform(tf, s, d);
                 detail::stack(s, d, x);
 
                 // copy out
-                for(int i=0; i<len; ++i) aout[it.oofs(i)] = x[i];
+                for(size_t i=0; i<len; ++i) aout[it.oofs(i)] = x[i];
             }
             d_in = d_out;
         }

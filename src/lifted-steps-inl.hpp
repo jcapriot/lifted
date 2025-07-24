@@ -454,7 +454,7 @@ namespace HWY_NAMESPACE {
                     hn::StoreU(yi, dtag, y + k);
                 }
             }
-            if (ptrdiff_t(k) < n2 ){
+            if (k < n2 ){
                 // Handle the last vector
                 const size_t rem = n2 - k;
                 auto yi = hn::LoadN(dtag, y + k, rem);
