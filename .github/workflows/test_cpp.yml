@@ -231,6 +231,32 @@ jobs:
       - name: Test
         run: meson test -C builddir -vv
 
+  APPLE_LLVM:
+    name: Apple LLVM
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.13'
+
+      - name: Install build requirements
+        run: python -m pip install meson ninja
+
+      - name: Configure Build
+        run: meson setup builddir -Dbuild_tests=True
+
+      - name: Build
+        run: meson compile -C builddir -v
+
+      - name: Test
+        run: meson test -C builddir -vv
+
   LLVM_MAC:
     name: LLVM on MacOS
     runs-on: macos-latest
