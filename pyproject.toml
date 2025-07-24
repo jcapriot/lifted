@@ -20,4 +20,5 @@ keywords = [
 ]
 
 [tool.meson-python.args]
-setup = ['-Dpython_install=true', '-Dbuild_tests=false']
+setup = ['-Dpython_install=true', '-Dbuild_tests=false', '--default-library=static']
+install = ['--skip-subprojects']

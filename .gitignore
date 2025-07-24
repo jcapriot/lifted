@@ -355,6 +355,9 @@ scratch/.ipynb_checkpoints/
 
 subprojects/googletest-1.15.2/
 
+subprojects/highway/
+subprojects/benchmark-1.8.4/
+
 subprojects/packagecache/
 
 .idea/
