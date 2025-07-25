@@ -404,11 +404,9 @@ hwy_include_dir = include_directories('.')
 
 hwy_version_file = files('hwy/hwy.version')
 
+cpp_link_args = []
 if target_machine.system() in ['linux', 'freebsd', 'netbsd', 'openbsd', 'dragonfly', 'sunos']
-    add_project_link_args(
-        ['-Wl,--version-script=' + hwy_version_file[0].full_path()],
-        language: 'cpp'
-    )
+    cpp_link_args += '-Wl,--version-script=' + hwy_version_file[0].full_path()
 endif
 
 hwy_installable = get_option('enable_install')
@@ -418,6 +416,7 @@ hwy_lib = library(
     hwy_sources,
     cpp_shared_args: ['-DHWY_SHARED_DEFINE', '-Dhwy_EXPORTS'],
     cpp_static_args: ['-DHWY_STATIC_DEFINE'],
+    link_args: cpp_link_args,
     install: hwy_installable,
     pic: true,
     version: meson.project_version(),
@@ -469,6 +468,7 @@ if get_option('enable_contrib')
         link_with: contrib_link_with,
         cpp_shared_args: ['-DHWY_SHARED_DEFINE', '-Dhwy_EXPORTS'],
         cpp_static_args: ['-DHWY_STATIC_DEFINE'],
+        link_args: cpp_link_args,
         build_by_default: false,
         install: true,
         pic: true,
@@ -505,6 +505,7 @@ hwy_test_lib = library(
     'hwy_test',
     hwy_test_sources,
     cpp_args: hwy_test_args,
+    link_args: cpp_link_args,
     dependencies: hwy_dep,
     pic: true,
     version: meson.project_version(),
