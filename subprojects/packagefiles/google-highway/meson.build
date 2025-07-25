@@ -10,6 +10,8 @@ project(
     'b_staticpic=true',
     'buildtype=debugoptimized',
     'default_library=static',
+    'warning_level=3',
+    'cpp_eh=none',
   ]
 )
 
@@ -204,8 +206,6 @@ hwy_test_sources = files(
 if cpp.get_argument_syntax() == 'msvc'
     add_project_arguments(
         '/bigobj',
-        # Warnings
-        '/W4',
         # Disable some W4 warnings.  Enable them individually after they are cleaned up.
         '/wd4100',
         '/wd4127',
@@ -217,7 +217,6 @@ if cpp.get_argument_syntax() == 'msvc'
 
         # CMake automatically adds exception handling flags.  Remove them.
         '/GR-',
-        '/EHs-c-',
         # Disable exceptions in STL code.
         '-D_HAS_EXCEPTIONS=0',
         language:'cpp'
@@ -257,10 +256,7 @@ else
 
         # Optimizations
         '-fmerge-all-constants',
-
-        # Warnings
-        '-Wall',
-        '-Wextra',
+    
         # These are not included in Wall nor Wextra:
         '-Wconversion',
         '-Wsign-conversion',
@@ -283,7 +279,6 @@ else
             '-Wthread-safety-analysis',
             '-Wundefined-func-template',
 
-            '-fno-cxx-exceptions',
             '-fno-slp-vectorize',
             '-fno-vectorize',
 
@@ -324,11 +319,7 @@ else
             language:'cpp',
         )
     else
-        add_project_arguments(
-            '-fmath-errno',
-            '-fno-exceptions',
-            language:'cpp',
-        )
+        add_project_arguments('-fmath-errno',language:'cpp')
     endif
 
     if get_option('sse2')
@@ -447,7 +438,6 @@ hwy_dep = declare_dependency(
 
 if get_option('enable_contrib')
     thread_dep = dependency('threads')
-    has_pthread = cpp.has_argument('-pthread')
 
     contrib_args = []
     contrib_link_with = []
@@ -456,7 +446,7 @@ if get_option('enable_contrib')
         contrib_args += '-DHWY_DISABLE_FUTEX'
     else
         if target_machine.system() == 'windows' and cpp.get_argument_syntax() != 'msvc'
-            contrib_link_with += cpp.find_library('synchronization')
+            contrib_link_with += cpp.find_library('synchronization', required:  get_option('enable_contrib'))
         endif
     endif
 
@@ -469,7 +459,7 @@ if get_option('enable_contrib')
         cpp_shared_args: ['-DHWY_SHARED_DEFINE', '-Dhwy_EXPORTS'],
         cpp_static_args: ['-DHWY_STATIC_DEFINE'],
         link_args: cpp_link_args,
-        build_by_default: false,
+        build_by_default: false, # only built if requested...
         install: true,
         pic: true,
         version: meson.project_version(),
@@ -481,6 +471,7 @@ if get_option('enable_contrib')
         link_with: hwy_contrib_lib,
         dependencies: hwy_dep,
     )
+
     if hwy_installable
         pkg.generate(
             hwy_contrib_lib,
@@ -496,9 +487,9 @@ endif
 
 hwy_test_args = []
 if get_option('test_standalone')
-    hwy_test_args += ['-DHWY_TEST_STANDALONE=0']
-else
     hwy_test_args += ['-DHWY_TEST_STANDALONE=1']
+else
+    hwy_test_args += ['-DHWY_TEST_STANDALONE=0']
 endif
 
 hwy_test_lib = library(
@@ -557,16 +548,15 @@ if get_option('enable_tests')
     
     fs = import('fs')
 
-    gtest_dep = dependency(
-        'gtest',
-        required:not get_option('test_standalone'),
-    )
-
-    gtest_main_dep = dependency(
-        'gtest',
-        main: true,
-        required:not get_option('test_standalone'),
-    )
+    if get_option('test_standalone')
+        gtest_main_dep = dependency('', required:false)
+    else
+        gtest_main_dep = dependency(
+            'gtest',
+            main:true,
+            fallback:['gtest', 'gtest_main_dep'],
+        )
+    endif
 
     hwy_test_files = files(
         'hwy/abort_test.cc',
@@ -657,7 +647,7 @@ if get_option('enable_tests')
             exe_name,
             test_srcs,
             cpp_args: test_exe_args,
-            dependencies: [hwy_test_dep, gtest_dep, gtest_main_dep],
+            dependencies: [hwy_test_dep, gtest_main_dep],
             link_args: test_exe_link_args,
         )
         
@@ -694,7 +684,7 @@ if get_option('enable_tests')
                 exe_name,
                 test_src,
                 cpp_args: test_exe_args,
-                dependencies: [hwy_test_dep, hwy_contrib_dep, gtest_dep, gtest_main_dep],
+                dependencies: [hwy_test_dep, hwy_contrib_dep, gtest_main_dep],
                 link_args: test_exe_link_args,
             )
         

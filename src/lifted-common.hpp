@@ -17,6 +17,10 @@
 #include <functional>
 #include <new>
 
+#if LIFTED_PTHREADS
+#include "pthread.h"
+#endif
+
 // Reserved:
 //    0 : Lazy Wavelet (Just a deinterleave operation)
 //    1-99 for Daubechies

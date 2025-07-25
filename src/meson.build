@@ -26,7 +26,7 @@ lifted_sources = files(
 lifted_lib = library(
 	'lifted_lib',
 	lifted_sources,
-	dependencies: hwy_dep,
+	dependencies: [hwy_dep, thread_dep],
 	cpp_shared_args: ['-DLIFTED_SHARED_DEFINE', '-DLIFTED_EXPORTS'],
 	install: true
 )

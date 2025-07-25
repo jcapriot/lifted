@@ -13,6 +13,11 @@ project(
 cpp = meson.get_compiler('cpp')
 cpp_id = cpp.get_id()
 
+thread_dep = dependency('threads')
+if cpp.has_header('pthread.h')
+	add_project_arguments('-DLIFTED_PTHREADS', language:'cpp')
+endif
+
 if 'msvc' in cpp_id
 	add_project_arguments('/bigobj', language: 'cpp')
 endif
