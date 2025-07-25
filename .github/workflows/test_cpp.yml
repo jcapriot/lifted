@@ -124,7 +124,7 @@ jobs:
           CXX: g++-14
 
       - name: Build
-        run: meson compile -C builddir -v
+        run: meson compile -C builddir -v -j 1
 
       - name: Test
         run: meson test -C builddir -vv
