@@ -27,6 +27,11 @@ jobs:
       - name: Configure Build
         run: meson setup builddir -Dbuild_tests=True -Dvsenv=True
 
+      - name: List Build Targets
+        run: |
+            meson compile -C builddir -v subprojects/highway/hwy_list_targets
+            subprojects/highway/hwy_list_targets
+
       - name: Build
         run: meson compile -C builddir -v
 
@@ -60,6 +65,14 @@ jobs:
           CXX: icx-cl
           CC: icx-cl
 
+      - name: List Build Targets
+        run: |
+        
+            $env:LIB = "$env:CONDA_PREFIX\Library\lib;" + $env:LIB
+            $env:LIBRARY_PATH = "$env:CONDA_PREFIX\Library\lib;" + $env:LIBRARY_PATH
+            meson compile -C builddir -v subprojects/highway/hwy_list_targets
+            subprojects/highway/hwy_list_targets
+
       - name: Build
         run: |
             $env:LIB = "$env:CONDA_PREFIX\Library\lib;" + $env:LIB
@@ -92,6 +105,11 @@ jobs:
           CXX: clang-cl
           CC: clang-cl
 
+      - name: List Build Targets
+        run: |
+            meson compile -C builddir -v subprojects/highway/hwy_list_targets
+            subprojects/highway/hwy_list_targets
+
       - name: Build
         run: meson compile -C builddir -v
 
@@ -122,6 +140,11 @@ jobs:
         run: meson setup builddir -Dbuild_tests=True
         env:
           CXX: g++-14
+
+      - name: List Build Targets
+        run: |
+            meson compile -C builddir -v subprojects/highway/hwy_list_targets
+            subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v -j 1
@@ -154,6 +177,11 @@ jobs:
         env:
           CXX: clang++-18
           CC: clang-18
+
+      - name: List Build Targets
+        run: |
+            meson compile -C builddir -v subprojects/highway/hwy_list_targets
+            subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v
@@ -193,6 +221,11 @@ jobs:
           CC: icx
           LDFLAGS: -lpthread
 
+      - name: List Build Targets
+        run: |
+            meson compile -C builddir -v subprojects/highway/hwy_list_targets
+            subprojects/highway/hwy_list_targets
+
       - name: Build
         run: meson compile -C builddir -v
 
@@ -225,6 +258,11 @@ jobs:
           CXX: g++-15
           CC: gcc-15
 
+      - name: List Build Targets
+        run: |
+            meson compile -C builddir -v subprojects/highway/hwy_list_targets
+            subprojects/highway/hwy_list_targets
+
       - name: Build
         run: meson compile -C builddir -v
 
@@ -250,6 +288,11 @@ jobs:
 
       - name: Configure Build
         run: meson setup builddir -Dbuild_tests=True
+
+      - name: List Build Targets
+        run: |
+            meson compile -C builddir -v subprojects/highway/hwy_list_targets
+            subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v
@@ -282,6 +325,11 @@ jobs:
         env:
           CXX: /opt/homebrew/opt/llvm/bin/clang++
           CC: /opt/homebrew/opt/llvm/bin/clang
+
+      - name: List Build Targets
+        run: |
+            meson compile -C builddir -v subprojects/highway/hwy_list_targets
+            subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v
