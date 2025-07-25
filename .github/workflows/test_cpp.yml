@@ -30,7 +30,7 @@ jobs:
       - name: List Build Targets
         run: |
             meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            subprojects/highway/hwy_list_targets
+            builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v
@@ -71,7 +71,7 @@ jobs:
             $env:LIB = "$env:CONDA_PREFIX\Library\lib;" + $env:LIB
             $env:LIBRARY_PATH = "$env:CONDA_PREFIX\Library\lib;" + $env:LIBRARY_PATH
             meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            subprojects/highway/hwy_list_targets
+            builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
         run: |
@@ -108,7 +108,7 @@ jobs:
       - name: List Build Targets
         run: |
             meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            subprojects/highway/hwy_list_targets
+            builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v
@@ -144,7 +144,7 @@ jobs:
       - name: List Build Targets
         run: |
             meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            subprojects/highway/hwy_list_targets
+            builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v -j 1
@@ -181,7 +181,7 @@ jobs:
       - name: List Build Targets
         run: |
             meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            subprojects/highway/hwy_list_targets
+            builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v
@@ -224,7 +224,7 @@ jobs:
       - name: List Build Targets
         run: |
             meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            subprojects/highway/hwy_list_targets
+            builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v
@@ -261,7 +261,7 @@ jobs:
       - name: List Build Targets
         run: |
             meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            subprojects/highway/hwy_list_targets
+            builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v
@@ -292,7 +292,7 @@ jobs:
       - name: List Build Targets
         run: |
             meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            subprojects/highway/hwy_list_targets
+            builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v
@@ -329,7 +329,7 @@ jobs:
       - name: List Build Targets
         run: |
             meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            subprojects/highway/hwy_list_targets
+            builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
         run: meson compile -C builddir -v
