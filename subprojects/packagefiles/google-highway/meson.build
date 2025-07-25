@@ -215,7 +215,7 @@ if cpp.get_argument_syntax() == 'msvc'
         '/wd4702',
         '/wd4723',
 
-        # CMake automatically adds exception handling flags.  Remove them.
+        # Dissable run-time type information.
         '/GR-',
         # Disable exceptions in STL code.
         '-D_HAS_EXCEPTIONS=0',

@@ -18,8 +18,13 @@ if cpp.has_header('pthread.h')
 	add_project_arguments('-DLIFTED_PTHREADS', language:'cpp')
 endif
 
-if 'msvc' in cpp_id
-	add_project_arguments('/bigobj', language: 'cpp')
+if cpp.get_argument_syntax() == 'msvc'
+	add_project_arguments(
+		'/bigobj',
+        # Dissable run-time type information.
+        '/GR-',
+		language: 'cpp'
+	)
 endif
 
 hwy = subproject(

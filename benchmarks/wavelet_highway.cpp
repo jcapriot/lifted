@@ -85,7 +85,12 @@ namespace HWY_NAMESPACE {
             func_name = "Daubechies3::Forward";
         }
         std::string target_name = TargetName(HWY_TARGET);
-        std::string type_name = typeid(T).name();
+        std::string type_name;
+        if constexpr(std::is_same_v(T, float)){
+            type_name = "float";
+        }else{
+            type_name = "double";
+        }
 
         auto name = target_name + "::" + func_name + "<" + type_name + ">";
 
