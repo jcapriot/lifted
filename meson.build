@@ -7,7 +7,7 @@ project(
 		'b_ndebug=if-release',
 		'cpp_std=c++20',
 	],
-	meson_version: '>=1.2',
+	meson_version: '>=1.3',
 )
 
 cpp = meson.get_compiler('cpp')
@@ -17,7 +17,17 @@ if 'msvc' in cpp_id
 	add_project_arguments('/bigobj', language: 'cpp')
 endif
 
-hwy = subproject('highway', default_options: {'default_library':'static'})
+hwy = subproject(
+	'highway', 
+	default_options: [
+		'default_library=static',
+		'enable_contrib=false',
+		'enable_examples=false',
+		'enable_tests=false',
+		'enable_install=false',
+		'test_standalone=false',
+	]
+)
 hwy_dep = hwy.get_variable('hwy_dep')
 
 not_static_build = get_option('default_library') != 'static'
@@ -30,7 +40,6 @@ endif
 subdir('src')
 
 if get_option('build_tests')
-	gtest_proj = subproject('gtest')
 	subdir('tests')
 endif
 

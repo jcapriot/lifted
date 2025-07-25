@@ -361,3 +361,5 @@ subprojects/benchmark-1.8.4/
 subprojects/packagecache/
 
 .idea/
+
+subprojects/googletest-1.17.0/

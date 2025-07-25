@@ -23,16 +23,11 @@ lifted_sources = files(
 	'lifted-sep-double.cpp',
 )
 
-lib_defines = []
-if not_static_build
-	lib_defines += ['-DLIFTED_SHARED_DEFINE', '-DLIFTED_EXPORTS']
-endif
-
 lifted_lib = library(
 	'lifted_lib',
 	lifted_sources,
 	dependencies: hwy_dep,
-	cpp_args: lib_defines,
+	cpp_shared_args: ['-DLIFTED_SHARED_DEFINE', '-DLIFTED_EXPORTS'],
 	install: true
 )
 
