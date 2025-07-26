@@ -5,13 +5,14 @@ project(
   meson_version: '>= 1.7.0',
   license: 'Apache-2.0 OR BSD-3-Clause',
   default_options: [
-    'cpp_std=c++17',
+    'cpp_std=c++17,c++14,c++11',
     'b_pie=true',
     'b_staticpic=true',
     'buildtype=debugoptimized',
     'default_library=static',
     'warning_level=3',
     'cpp_eh=none',
+    'cpp_rtti=false',
   ]
 )
 
@@ -215,8 +216,6 @@ if cpp.get_argument_syntax() == 'msvc'
         '/wd4702',
         '/wd4723',
 
-        # Dissable run-time type information.
-        '/GR-',
         # Disable exceptions in STL code.
         '-D_HAS_EXCEPTIONS=0',
         language:'cpp'
