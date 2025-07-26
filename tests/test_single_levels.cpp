@@ -30,6 +30,7 @@ HWY_BEFORE_NAMESPACE();
 namespace lifted {
 namespace detail {
 namespace HWY_NAMESPACE{
+
     template<typename T>
     static auto make_test_jump_table() {
 
@@ -53,7 +54,21 @@ namespace HWY_NAMESPACE{
             });
         });
         return jump_table;
-    }	
+    }
+
+	template<typename T, typename... Args>
+	static void test_transform_dispatch(
+		const detail::MockWavelet wvlt, const Transform op, const detail::TestVecDir ax,
+		Args&&... args
+	){
+		const static auto test_jump_table = make_test_jump_table<T>();
+	
+		const size_t iw = static_cast<size_t>(wvlt);
+		const size_t it_op = static_cast<size_t>(op);
+		const size_t idir = static_cast<size_t>(ax);
+
+		test_jump_table[iw][it_op][idir](std::forward<Args>(args)...);
+	}
 }
 }
 
@@ -64,8 +79,6 @@ namespace HWY_NAMESPACE {
 	namespace lfd = lifted::detail::HWY_NAMESPACE;
 	namespace hn = hwy::HWY_NAMESPACE;
 
-	const static auto test_jump_table = lfd::make_test_jump_table<prec>();
-
 	HWY_NOINLINE void ValidateForwardBackward(
 		const detail::test_parameters& params
 	){
@@ -73,14 +86,6 @@ namespace HWY_NAMESPACE {
 		const BoundaryCondition bc = std::get<1>(params);
 		const detail::TestVecDir ax = std::get<2>(params);
 		const size_t len = std::get<3>(params);
-
-		const size_t iw = static_cast<size_t>(wvlt);
-		const size_t it_f = static_cast<size_t>(Transform::Forward);
-		const size_t it_i = static_cast<size_t>(Transform::Inverse);
-		const size_t idir = static_cast<size_t>(ax);
-
-		const auto& for_func = test_jump_table[iw][it_f][idir];
-		const auto& inv_func = test_jump_table[iw][it_i][idir];
 
 		const bool is_vec = ax == detail::TestVecDir::Across;
 
@@ -110,8 +115,8 @@ namespace HWY_NAMESPACE {
 		detail::fill_sin(ref_e, -11.1, 13.4);
 		detail::fill_sin(ref_o, -10.2, 12.15);
 
-		for_func(bc, &arr_e[0], &arr_o[0], N_o, N_e);
-		inv_func(bc, &arr_e[0], &arr_o[0], N_o, N_e);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Forward, ax, bc, &arr_e[0], &arr_o[0], N_o, N_e);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Inverse, ax, bc, &arr_e[0], &arr_o[0], N_o, N_e);
 		
 		for (size_t i = 0; i < Nt_e; ++i)
 			EXPECT_NEAR(ref_e[i], arr_e[i], atol + rtol * std::abs(ref_e[i]));
@@ -128,14 +133,6 @@ namespace HWY_NAMESPACE {
 		const detail::TestVecDir ax = std::get<2>(params);
 		const size_t len = std::get<3>(params);
 
-		const size_t iw = static_cast<size_t>(wvlt);
-		const size_t it_f = static_cast<size_t>(Transform::ForwardAdjoint);
-		const size_t it_i = static_cast<size_t>(Transform::InverseAdjoint);
-		const size_t idir = static_cast<size_t>(ax);
-
-		const auto& for_func = test_jump_table[iw][it_f][idir];
-		const auto& inv_func = test_jump_table[iw][it_i][idir];
-
 		const bool is_vec = ax == detail::TestVecDir::Across;
 
 		prec rtol = 1E-6;
@@ -164,8 +161,8 @@ namespace HWY_NAMESPACE {
 		detail::fill_sin(ref_e, -11.1, 13.4);
 		detail::fill_sin(ref_o, -10.2, 12.15);
 
-		for_func(bc, &arr_e[0], &arr_o[0], N_o, N_e);
-		inv_func(bc, &arr_e[0], &arr_o[0], N_o, N_e);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::ForwardAdjoint, ax, bc, &arr_e[0], &arr_o[0], N_o, N_e);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::InverseAdjoint, ax, bc, &arr_e[0], &arr_o[0], N_o, N_e);
 		
 		for (size_t i = 0; i < Nt_e; ++i)
 			EXPECT_NEAR(ref_e[i], arr_e[i], atol + rtol * std::abs(ref_e[i]));
@@ -181,14 +178,6 @@ namespace HWY_NAMESPACE {
 		const BoundaryCondition bc = std::get<1>(params);
 		const detail::TestVecDir ax = std::get<2>(params);
 		const size_t len = std::get<3>(params);
-
-		const size_t iw = static_cast<size_t>(wvlt);
-		const size_t it_f = static_cast<size_t>(Transform::Forward);
-		const size_t it_fT = static_cast<size_t>(Transform::ForwardAdjoint);
-		const size_t idir = static_cast<size_t>(ax);
-
-		const auto& for_func = test_jump_table[iw][it_f][idir];
-		const auto& forT_func = test_jump_table[iw][it_fT][idir];
 
 		const bool is_vec = ax == detail::TestVecDir::Across;
 
@@ -228,10 +217,10 @@ namespace HWY_NAMESPACE {
 			lfd::deinterleave(detail::Along(), &ref_u[0], &u[0], len);
 		}
 
-		for_func(bc, &u_e[0], &u_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Forward, ax, bc, &u_e[0], &u_o[0], N_e, N_o);
 		prec v_Fu = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
-		forT_func(bc, &v_e[0], &v_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::ForwardAdjoint, ax, bc, &v_e[0], &v_o[0], N_e, N_o);
 
 		if(is_vec){
 			lfd::interleave(detail::Across(), &v[0], &v_out[0], len);
@@ -251,14 +240,6 @@ namespace HWY_NAMESPACE {
 		const detail::TestVecDir ax = std::get<2>(params);
 		const size_t len = std::get<3>(params);
 
-		const size_t iw = static_cast<size_t>(wvlt);
-		const size_t it_i = static_cast<size_t>(Transform::Inverse);
-		const size_t it_iT = static_cast<size_t>(Transform::InverseAdjoint);
-		const size_t idir = static_cast<size_t>(ax);
-
-		const auto& inv_func = test_jump_table[iw][it_i][idir];
-		const auto& invT_func = test_jump_table[iw][it_iT][idir];
-
 		const bool is_vec = ax == detail::TestVecDir::Across;
 
 		prec rtol = 1E-6;
@@ -297,10 +278,10 @@ namespace HWY_NAMESPACE {
 			lfd::deinterleave(detail::Along(), &ref_u[0], &u[0], len);
 		}
 
-		inv_func(bc, &u_e[0], &u_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Inverse, ax, bc, &u_e[0], &u_o[0], N_e, N_o);
 		prec v_Fu = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
-		invT_func(bc, &v_e[0], &v_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::InverseAdjoint, ax, bc, &v_e[0], &v_o[0], N_e, N_o);
 
 		if(is_vec){
 			lfd::interleave(detail::Across(), &v[0], &v_out[0], len);
@@ -320,14 +301,6 @@ namespace HWY_NAMESPACE {
 		const detail::TestVecDir ax = std::get<2>(params);
 		const size_t len = std::get<3>(params);
 
-		const size_t iw = static_cast<size_t>(wvlt);
-		const size_t it_f = static_cast<size_t>(Transform::Forward);
-		const size_t it_iT = static_cast<size_t>(Transform::InverseAdjoint);
-		const size_t idir = static_cast<size_t>(ax);
-
-		const auto& for_func = test_jump_table[iw][it_f][idir];
-		const auto& invT_func = test_jump_table[iw][it_iT][idir];
-
 		const bool is_vec = ax == detail::TestVecDir::Across;
 
 		prec rtol = 1E-6;
@@ -357,8 +330,8 @@ namespace HWY_NAMESPACE {
 
 		prec v_dot_u = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
-		for_func(bc, &u_e[0], &u_o[0], N_e, N_o);
-		invT_func(bc, &v_e[0], &v_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Forward, ax, bc, &u_e[0], &u_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::InverseAdjoint, ax, bc, &v_e[0], &v_o[0], N_e, N_o);
 
 		prec vw_dot_uw = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
@@ -373,14 +346,6 @@ namespace HWY_NAMESPACE {
 		const detail::TestVecDir ax = std::get<2>(params);
 		const size_t len = std::get<3>(params);
 
-		const size_t iw = static_cast<size_t>(wvlt);
-		const size_t it_fT = static_cast<size_t>(Transform::ForwardAdjoint);
-		const size_t it_i = static_cast<size_t>(Transform::Inverse);
-		const size_t idir = static_cast<size_t>(ax);
-
-		const auto& forT_func = test_jump_table[iw][it_fT][idir];
-		const auto& inv_func = test_jump_table[iw][it_i][idir];
-
 		const bool is_vec = ax == detail::TestVecDir::Across;
 
 		prec rtol = 1E-6;
@@ -410,8 +375,8 @@ namespace HWY_NAMESPACE {
 
 		prec v_dot_u = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
-		forT_func(bc, &u_e[0], &u_o[0], N_e, N_o);
-		inv_func(bc, &v_e[0], &v_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::ForwardAdjoint, ax, bc, &u_e[0], &u_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Inverse, ax, bc, &v_e[0], &v_o[0], N_e, N_o);
 
 		prec vw_dot_uw = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
