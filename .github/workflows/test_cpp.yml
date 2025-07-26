@@ -53,7 +53,7 @@ jobs:
           python-version: 3.13
 
       - name: Install build requirements
-        run: conda install --yes -c conda-forge meson ninja dpcpp_win-64=2025.1
+        run: conda install --yes -c conda-forge meson ninja dpcpp_win-64=2025.1 pkg-config
 
         # Appending conda's library path to the LIB and LIBRARY_PATH environment variables...
       - name: Configure Build
@@ -93,11 +93,11 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
-          activate-environment: intel
+          activate-environment: llvm
           python-version: 3.13
 
       - name: Install build requirements
-        run: conda install --yes -c conda-forge meson ninja clang clangxx lld
+        run: conda install --yes -c conda-forge meson ninja clang clangxx lld llvm pkg-config
 
       - name: Configure Build
         run: meson setup builddir -Dbuild_tests=True -Dvsenv=True
