@@ -8,14 +8,11 @@ option('sse2', type : 'boolean', value : false, description: 'Set SSE2 as baseli
 
 option('rvv', type : 'boolean', value : true, description: 'Set copts for RISCV with RVV?')
 
-option('warnings_are_errors', type : 'boolean', value : false, description: 'Add -Werror flag?')
-
 # Experimental
 option('header_only', type : 'boolean', value : false, description: 'Change to header-only?')
 
 option('enable_contrib', type : 'boolean', value : true, description: 'Include contrib/')
 option('enable_examples', type : 'boolean', value : true, description: 'Build examples')
-option('enable_install', type : 'boolean', value : true, description: 'Install library')
 option('enable_tests', type : 'boolean', value : true, description: 'Enable HWY tests')
 
 option('test_standalone', type : 'boolean', value : false, description: 'Disable use of googletest')

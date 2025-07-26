@@ -10,31 +10,26 @@ project(
     'b_staticpic=true',
     'buildtype=debugoptimized',
     'default_library=static',
-    'warning_level=3',
+    'warning_level=3',  # -Wall -Wextra -Wpedantic on gcc/clang, /W3 on msvc
     'cpp_eh=none',
     'cpp_rtti=false',
+    'werror=false',  # meson has builtin warnings_are_errors option
   ]
 )
 
 cpp = meson.get_compiler('cpp')
 pkg = import('pkgconfig')
 
-cpp.has_header('atomic', required:true)
-
 have_emscripten = cpp.has_define('__EMSCRIPTEN__')
 have_riscv = cpp.has_define('__riscv')
 
 support_lsx_flag = false
 support_lasx_flag = false
-if target_machine.cpu_family() == 'loongarch64'
-    if get_option('lsx')
-        cpp.has_argument('-mlsx', required: true)
-        cpp.has_define('__loongarch_sx', required: true)
+if 'loongarch' in target_machine.cpu_family()
+    if get_option('lsx') and cpp.has_define('__loongarch_sx', args: '-mlsx')
         add_project_arguments('-mlsx', language:'cpp')
     endif
-    if get_option('lasx')
-        cpp.has_argument('-mlasx', required: true)
-        cpp.has_define('__loongarch_asx', required: true)
+    if get_option('lasx') and cpp.has_define('__loongarch_asx', args: '-mlasx')
         add_project_arguments('-mlasx', language:'cpp')
     endif
 endif
@@ -68,21 +63,9 @@ if not has_win_synchronization_lib and is_windows
 endif
 
 riscv_xlen = 0
-if have_riscv or target_machine.cpu_family() in ['riscv32', 'riscv64']
-    riscv_xlen = cpp.compute_int(
-        '''
-        #ifdef __riscv_xlen
-        __riscv_xlen
-        #else
-        0
-        #endif
-        ''',
-        guess = 64,
-        low = 0,
-        high = 64
-    )
-
-    if riscv_xlen == 0
+if have_riscv or 'riscv' in target_machine.cpu_family()
+    riscv_xlen = cpp.get_define('__riscv_xlen')
+    if riscv_xlen == ''
         message('Unable to determine RISC-V XLEN')
     endif
 endif
@@ -168,6 +151,7 @@ hwy_contrib_sources = files(
     'hwy/contrib/sort/vqsort.cc',
     'hwy/contrib/thread_pool/topology.cc',
     # plus all of the vqsort_*.cc....
+    # note meson doesn't directly support glob (by design).
     'hwy/contrib/sort/vqsort_128a.cc',
     'hwy/contrib/sort/vqsort_128d.cc',
     'hwy/contrib/sort/vqsort_f16a.cc',
@@ -204,9 +188,14 @@ hwy_test_sources = files(
     'hwy/tests/test_util.cc'
 )
 
+cpp_link_args = []
 if cpp.get_argument_syntax() == 'msvc'
     add_project_arguments(
         '/bigobj',
+
+        # Warnings
+        # '/W4', # handled by warning_level=3 default option
+
         # Disable some W4 warnings.  Enable them individually after they are cleaned up.
         '/wd4100',
         '/wd4127',
@@ -216,6 +205,8 @@ if cpp.get_argument_syntax() == 'msvc'
         '/wd4702',
         '/wd4723',
 
+        # '/GR-',  # handled by cpp_rtti=false default option
+        # '/EHs-c-',  # handled by cpp_eh=none default option
         # Disable exceptions in STL code.
         '-D_HAS_EXCEPTIONS=0',
         language:'cpp'
@@ -241,10 +232,6 @@ if cpp.get_argument_syntax() == 'msvc'
             language:'cpp'
         )
     endif
-
-    if get_option('warnings_are_errors')
-        add_project_arguments('/WX', language:'cpp')
-    endif
 else
     add_project_arguments(
         # Avoid changing binaries based on the current time and date.
@@ -256,6 +243,9 @@ else
         # Optimizations
         '-fmerge-all-constants',
     
+        # Warnings
+        # '-Wall', handled by warning_level
+        # '-Wextra', handled by warning_level
         # These are not included in Wall nor Wextra:
         '-Wconversion',
         '-Wsign-conversion',
@@ -278,6 +268,7 @@ else
             '-Wthread-safety-analysis',
             '-Wundefined-func-template',
 
+            # '-fno-cxx-exceptions' # handled by default build option cpp_eh=none
             '-fno-slp-vectorize',
             '-fno-vectorize',
 
@@ -318,7 +309,12 @@ else
             language:'cpp',
         )
     else
-        add_project_arguments('-fmath-errno',language:'cpp')
+
+        add_project_arguments(
+            '-fmath-errno',
+            # '-fno-exceptions', # handled by cpp_eh=none default option
+            language:'cpp'
+        )
     endif
 
     if get_option('sse2')
@@ -341,6 +337,8 @@ else
             '-march=armv7-a',
             '-mfpu=neon-vfpv4',
             '-mfloat-abi=hard',
+            '-DHWY_HAVE_SCALAR_F16_TYPE=0',  # See #2625
+            '-DHWY_NEON_HAVE_F16C=0',
             language: 'cpp',
         )
         if cpp.get_id() == 'gcc'
@@ -351,22 +349,18 @@ else
         endif
     endif
 
-    if have_riscv and get_option('riscv')
-        if riscv_xlen == 64
+    if have_riscv and get_option('rvv')
+        if riscv_xlen == '64'
             add_project_arguments('-march=rv64gcv1p0', language: 'cpp')
-            add_project_link_args('-march=rv64gcv1p0', language: 'cpp')
-        elif riscv_xlen == 32
+            cpp_link_args += '-march=rv64gcv1p0'
+        elif riscv_xlen == '32'
             add_project_arguments('-march=rv32gcv1p0', language: 'cpp')
-            add_project_link_args('-march=rv32gcv1p0', language: 'cpp')
+            cpp_link_args += '-march=rv32gcv1p0'
         endif
 
         if cpp.get_id() == 'clang'
             add_project_arguments('-menable-experimental-extensions', language: 'cpp')
         endif
-    endif
-
-    if get_option('warnings_are_errors')
-        add_project_arguments('-Werror', language:'cpp')
     endif
 
     if have_emscripten
@@ -394,7 +388,6 @@ hwy_include_dir = include_directories('.')
 
 hwy_version_file = files('hwy/hwy.version')
 
-cpp_link_args = []
 if target_machine.system() in ['linux', 'freebsd', 'netbsd', 'openbsd', 'dragonfly', 'sunos']
     cpp_link_args += '-Wl,--version-script=' + hwy_version_file[0].full_path()
 endif
@@ -404,29 +397,20 @@ hwy_installable = get_option('enable_install')
 hwy_lib = library(
     'hwy',
     hwy_sources,
+    cpp_args: toolchain_args,
     cpp_shared_args: ['-DHWY_SHARED_DEFINE', '-Dhwy_EXPORTS'],
     cpp_static_args: ['-DHWY_STATIC_DEFINE'],
     link_args: cpp_link_args,
-    install: hwy_installable,
+    install: true,
     pic: true,
     version: meson.project_version(),
-    extra_files: hwy_version_file,
+    link_depends: hwy_version_file,
+    gnu_symbol_visibility: 'inlineshidden',
 )
 
 hwy_dep_args = []
 if get_option('default_library') != 'static'
     hwy_dep_args += '-DHWY_SHARED_DEFINE'
-endif
-
-if hwy_installable
-    install_headers(hwy_headers)
-
-    pkg.generate(
-        hwy_lib,
-        description: 'Efficient and performance-portable SIMD wrapper',
-        name: 'libhwy',
-        extra_cflags: hwy_dep_args,
-    )
 endif
 
 hwy_dep = declare_dependency(
@@ -435,73 +419,97 @@ hwy_dep = declare_dependency(
     link_with: hwy_lib,
 )
 
+
+install_headers(hwy_headers, preserve_path:true)
+
+pkg.generate(
+    hwy_lib,
+    description: 'Efficient and performance-portable SIMD wrapper',
+    name: 'libhwy',
+    extra_cflags: hwy_dep_args,
+)
+
+atomic_dep = dependency('', required:false) # an empty dependency
+if get_option('enable_contrib') or get_option('enable_examples')
+  
+    atomic_code = '''
+        #include <atomic>
+        #include <cstdint>
+        std::atomic<uint8_t> n8 (0); // riscv64
+        std::atomic<uint64_t> n64 (0); // armel, mipsel, powerpc
+        int main() {
+            ++n8;
+            ++n64;
+            return 0;
+        }
+        '''
+    if not cpp.compiles(atomic_code)
+        atomic_dep = cpp.find_library('atomic', required:true)
+        cpp.links(atomic_code, dependencies:atomic_dep, required:true)
+    endif
+endif
+
 if get_option('enable_contrib')
+    # these dependencies look to be only required if enable_contrib
+    contrib_deps = [hwy_dep, atomic_dep]
+
     thread_dep = dependency('threads')
+    contrib_deps += thread_dep
 
     contrib_args = []
-    contrib_link_with = []
 
     if disable_futex
         contrib_args += '-DHWY_DISABLE_FUTEX'
     else
         if target_machine.system() == 'windows' and cpp.get_argument_syntax() != 'msvc'
-            contrib_link_with += cpp.find_library('synchronization', required:  get_option('enable_contrib'))
+            contrib_deps += cpp.find_library('synchronization', required: true)
         endif
     endif
 
     hwy_contrib_lib = library(
         'hwy_contrib',
         hwy_contrib_sources,
-        dependencies: [thread_dep, hwy_dep],
+        dependencies: contrib_deps,
         cpp_args: contrib_args,
-        link_with: contrib_link_with,
         cpp_shared_args: ['-DHWY_SHARED_DEFINE', '-Dhwy_EXPORTS'],
         cpp_static_args: ['-DHWY_STATIC_DEFINE'],
         link_args: cpp_link_args,
         build_by_default: false, # only built if requested...
-        install: true,
+        install: hwy_installable,
         pic: true,
         version: meson.project_version(),
-        extra_files: hwy_version_file,
+        link_depends: hwy_version_file,
+        gnu_symbol_visibility: 'inlineshidden',
     )
 
     hwy_contrib_dep = declare_dependency(
         compile_args: contrib_args,
         link_with: hwy_contrib_lib,
-        dependencies: hwy_dep,
+        dependencies: contrib_deps
     )
 
-    if hwy_installable
-        pkg.generate(
-            hwy_contrib_lib,
-            description: 'Additions to Highway: dot product, image, math, sort',
-            name: 'libhwy-contrib',
-            #extra_cflags: hwy_dep_args + contrib_args,
-            #libs: contrib_link_with,
-        )
+    pkg.generate(
+        hwy_contrib_lib,
+        description: 'Additions to Highway: dot product, image, math, sort',
+        name: 'libhwy-contrib',
+        #extra_cflags: hwy_dep_args + contrib_args,
+        #libs: contrib_link_with,
+    )
 
-        install_headers(hwy_contrib_headers)
-    endif
-endif
-
-hwy_test_args = []
-if get_option('test_standalone')
-    hwy_test_args += ['-DHWY_TEST_STANDALONE=1']
-else
-    hwy_test_args += ['-DHWY_TEST_STANDALONE=0']
+    install_headers(hwy_contrib_headers, preserve_path:true)
 endif
 
 hwy_test_lib = library(
     'hwy_test',
     hwy_test_sources,
-    cpp_args: hwy_test_args,
     link_args: cpp_link_args,
     dependencies: hwy_dep,
     pic: true,
     version: meson.project_version(),
     extra_files: hwy_version_file,
     build_by_default: false,
-    install: get_option('enable_tests')
+    install: get_option('enable_tests'),
+    gnu_symbol_visibility: 'inlineshidden',
 )
 
 hwy_test_dep = declare_dependency(
@@ -510,14 +518,22 @@ hwy_test_dep = declare_dependency(
     dependencies: hwy_dep,
 )
 
+hwy_test_args = []
+if get_option('test_standalone')
+    hwy_test_args += '-DHWY_TEST_STANDALONE=1'
+else
+    hwy_test_args += '-DHWY_TEST_STANDALONE=0'
+endif
+
 hwy_list_targets = executable(
     'hwy_list_targets',
     'hwy/tests/list_targets.cc',
     dependencies: hwy_dep,
 )
 
-if get_option('enable_tests') and hwy_installable
-    install_headers(hwy_test_headers)
+if get_option('enable_tests')
+    install_headers(hwy_test_headers, preserve_path:true)
+
     pkg.generate(
         hwy_test_lib,
         name: 'libhwy-test',
@@ -530,14 +546,14 @@ if get_option('enable_examples')
     executable(
         'hwy_benchmark',
         'hwy/examples/benchmark.cc',
-        dependencies: hwy_dep,
+        dependencies: [hwy_dep, atomic_dep]
     )
 
     if get_option('enable_contrib')
         executable(
             'hwy_profiler_example',
             'hwy/examples/profiler_example.cc',
-            dependencies: hwy_dep,
+            dependencies: [hwy_dep, hwy_contrib]
         )
     endif
 
@@ -548,8 +564,9 @@ if get_option('enable_tests')
     fs = import('fs')
 
     if get_option('test_standalone')
-        gtest_main_dep = dependency('', required:false)
+        gtest_main_dep = dependency('', required:false) # empty dependency
     else
+        # defaults to system gtest with fallback to a local gtest subproject
         gtest_main_dep = dependency(
             'gtest',
             main:true,
@@ -691,3 +708,8 @@ if get_option('enable_tests')
         endforeach
     endif
 endif
+
+cmake = import('cmake')
+cmake.write_basic_package_version_file(
+    name:'hwy-config-version.cmake', compatibility:'SameMajorVersion'
+)
