@@ -286,7 +286,7 @@ else
             '-fcolor-diagnostics',
             language:'cpp'
         )
-        if cpp.version() >= '6.0'
+        if cpp.version().version_compare('>=6.0')
             add_project_arguments(
                 '-Wc++2a-extensions',
                 language:'cpp'
