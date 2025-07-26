@@ -97,7 +97,7 @@ jobs:
           python-version: 3.13
 
       - name: Install build requirements
-        run: conda install --yes -c conda-forge meson ninja clang clangxx lld llvm pkg-config
+        run: conda install --yes -c conda-forge meson ninja clang clangxx lld llvm llvm-tools pkg-config
 
       - name: Configure Build
         run: meson setup builddir -Dbuild_tests=True -Dvsenv=True
