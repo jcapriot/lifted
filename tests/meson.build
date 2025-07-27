@@ -15,7 +15,7 @@ test_single_levels = executable(
 	include_directories : test_inc,
 )
 
-test('single_level', test_single_levels)
+test('single_level', test_single_levels, protocol:'gtest', suite:'mock')
 
 
 test_dwt = executable(
@@ -26,4 +26,4 @@ test_dwt = executable(
 	include_directories : test_inc,
 )
 
-test('driver', test_dwt)
+test('driver', test_dwt, protocol:'gtest', suite: 'lwt')

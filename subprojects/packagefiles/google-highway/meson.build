@@ -392,8 +392,6 @@ if target_machine.system() in ['linux', 'freebsd', 'netbsd', 'openbsd', 'dragonf
     cpp_link_args += '-Wl,--version-script=' + hwy_version_file[0].full_path()
 endif
 
-hwy_installable = get_option('enable_install')
-
 hwy_lib = library(
     'hwy',
     hwy_sources,
@@ -475,7 +473,7 @@ if get_option('enable_contrib')
         cpp_static_args: ['-DHWY_STATIC_DEFINE'],
         link_args: cpp_link_args,
         build_by_default: false, # only built if requested...
-        install: hwy_installable,
+        install: true,
         pic: true,
         version: meson.project_version(),
         link_depends: hwy_version_file,
@@ -512,18 +510,18 @@ hwy_test_lib = library(
     gnu_symbol_visibility: 'inlineshidden',
 )
 
-hwy_test_dep = declare_dependency(
-    link_with: hwy_test_lib,
-    compile_args: hwy_test_args,
-    dependencies: hwy_dep,
-)
-
 hwy_test_args = []
 if get_option('test_standalone')
     hwy_test_args += '-DHWY_TEST_STANDALONE=1'
 else
     hwy_test_args += '-DHWY_TEST_STANDALONE=0'
 endif
+
+hwy_test_dep = declare_dependency(
+    link_with: hwy_test_lib,
+    compile_args: hwy_test_args,
+    dependencies: hwy_dep,
+)
 
 hwy_list_targets = executable(
     'hwy_list_targets',
@@ -553,7 +551,7 @@ if get_option('enable_examples')
         executable(
             'hwy_profiler_example',
             'hwy/examples/profiler_example.cc',
-            dependencies: [hwy_dep, hwy_contrib]
+            dependencies: [hwy_dep, hwy_contrib_dep]
         )
     endif
 
@@ -667,7 +665,7 @@ if get_option('enable_tests')
             link_args: test_exe_link_args,
         )
         
-        test(exe_name, test_exe, suite:'hwy')
+        test(exe_name, test_exe, protocol:'gtest')
     endforeach
 
     if get_option('enable_contrib')
@@ -704,12 +702,16 @@ if get_option('enable_tests')
                 link_args: test_exe_link_args,
             )
         
-            test(exe_name, test_exe, suite:['hwy','hwy-contrib'])
+            test(exe_name, test_exe, protocol:'gtest', suite:'contrib')
         endforeach
     endif
 endif
 
-cmake = import('cmake')
-cmake.write_basic_package_version_file(
-    name:'hwy-config-version.cmake', compatibility:'SameMajorVersion'
-)
+# if cmake
+cmake_bin = find_program('cmake', required: false)
+if cmake_bin.found()
+    cmake = import('cmake')
+    cmake.write_basic_package_version_file(
+        name:'hwy-config-version.cmake', compatibility:'SameMajorVersion', version:meson.project_version()
+    )
+endif
