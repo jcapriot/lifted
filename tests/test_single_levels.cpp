@@ -94,35 +94,35 @@ namespace HWY_NAMESPACE {
 		
 		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
 
-		const size_t N_o = len / 2;
-		const size_t N_e = len - N_o;
+		const size_t N_d = len / 2;
+		const size_t N_s = len - N_d;
 
-		const size_t Nt_o = N_o * nv;
-		const size_t Nt_e = N_e * nv;
+		const size_t Nt_d = N_d * nv;
+		const size_t Nt_s = N_s * nv;
 
-		auto alligned_arr_e = hwy::AllocateAligned<prec>(Nt_e);
-		auto alligned_arr_o = hwy::AllocateAligned<prec>(Nt_o);
+		auto alligned_arr_s = hwy::AllocateAligned<prec>(Nt_s);
+		auto alligned_arr_d = hwy::AllocateAligned<prec>(Nt_d);
 
-		auto arr_e = std::span(alligned_arr_e.get(), Nt_e);
-		auto arr_o = std::span(alligned_arr_o.get(), Nt_o);
+		auto arr_s = std::span(alligned_arr_s.get(), Nt_s);
+		auto arr_d = std::span(alligned_arr_d.get(), Nt_d);
 
-		detail::fill_sin(arr_e, -11.1, 13.4);
-		detail::fill_sin(arr_o, -10.2, 12.15);
+		detail::fill_sin(arr_s, -11.1, 13.4);
+		detail::fill_sin(arr_d, -10.2, 12.15);
 
-		auto ref_e = std::vector<prec>(Nt_e);
-		auto ref_o = std::vector<prec>(Nt_o);
+		auto ref_e = std::vector<prec>(Nt_s);
+		auto ref_o = std::vector<prec>(Nt_d);
 
 		detail::fill_sin(ref_e, -11.1, 13.4);
 		detail::fill_sin(ref_o, -10.2, 12.15);
 
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::Forward, ax, bc, &arr_e[0], &arr_o[0], N_o, N_e);
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::Inverse, ax, bc, &arr_e[0], &arr_o[0], N_o, N_e);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Forward, ax, bc, &arr_s[0], &arr_d[0], N_s, N_d);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Inverse, ax, bc, &arr_s[0], &arr_d[0], N_s, N_d);
 		
-		for (size_t i = 0; i < Nt_e; ++i)
-			EXPECT_NEAR(ref_e[i], arr_e[i], atol + rtol * std::abs(ref_e[i]));
+		for (size_t i = 0; i < Nt_s; ++i)
+			EXPECT_NEAR(ref_e[i], arr_s[i], atol + rtol * std::abs(ref_e[i]));
 		
-		for (size_t i = 0; i < Nt_o; ++i)
-			EXPECT_NEAR(ref_o[i], arr_o[i], atol + rtol * std::abs(ref_o[i]));
+		for (size_t i = 0; i < Nt_d; ++i)
+			EXPECT_NEAR(ref_o[i], arr_d[i], atol + rtol * std::abs(ref_o[i]));
 	}
 	
 	HWY_NOINLINE void ValidateAdjointForwardBackward(
@@ -140,35 +140,35 @@ namespace HWY_NAMESPACE {
 		
 		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
 
-		const size_t N_o = len / 2;
-		const size_t N_e = len - N_o;
+		const size_t N_d = len / 2;
+		const size_t N_s = len - N_d;
 
-		const size_t Nt_o = N_o * nv;
-		const size_t Nt_e = N_e * nv;
+		const size_t Nt_d = N_d * nv;
+		const size_t Nt_s = N_s * nv;
 
-		auto alligned_arr_e = hwy::AllocateAligned<prec>(Nt_e);
-		auto alligned_arr_o = hwy::AllocateAligned<prec>(Nt_o);
+		auto alligned_arr_s = hwy::AllocateAligned<prec>(Nt_s);
+		auto alligned_arr_d = hwy::AllocateAligned<prec>(Nt_d);
 
-		auto arr_e = std::span(alligned_arr_e.get(), Nt_e);
-		auto arr_o = std::span(alligned_arr_o.get(), Nt_o);
+		auto arr_s = std::span(alligned_arr_s.get(), Nt_s);
+		auto arr_d = std::span(alligned_arr_d.get(), Nt_d);
 
-		detail::fill_sin(arr_e, -11.1, 13.4);
-		detail::fill_sin(arr_o, -10.2, 12.15);
+		detail::fill_sin(arr_s, -11.1, 13.4);
+		detail::fill_sin(arr_d, -10.2, 12.15);
 
-		auto ref_e = std::vector<prec>(Nt_e);
-		auto ref_o = std::vector<prec>(Nt_o);
+		auto ref_e = std::vector<prec>(Nt_s);
+		auto ref_o = std::vector<prec>(Nt_d);
 
 		detail::fill_sin(ref_e, -11.1, 13.4);
 		detail::fill_sin(ref_o, -10.2, 12.15);
 
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::ForwardAdjoint, ax, bc, &arr_e[0], &arr_o[0], N_o, N_e);
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::InverseAdjoint, ax, bc, &arr_e[0], &arr_o[0], N_o, N_e);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::ForwardAdjoint, ax, bc, &arr_s[0], &arr_d[0], N_s, N_d);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::InverseAdjoint, ax, bc, &arr_s[0], &arr_d[0], N_s, N_d);
 		
-		for (size_t i = 0; i < Nt_e; ++i)
-			EXPECT_NEAR(ref_e[i], arr_e[i], atol + rtol * std::abs(ref_e[i]));
+		for (size_t i = 0; i < Nt_s; ++i)
+			EXPECT_NEAR(ref_e[i], arr_s[i], atol + rtol * std::abs(ref_e[i]));
 		
-		for (size_t i = 0; i < Nt_o; ++i)
-			EXPECT_NEAR(ref_o[i], arr_o[i], atol + rtol * std::abs(ref_o[i]));
+		for (size_t i = 0; i < Nt_d; ++i)
+			EXPECT_NEAR(ref_o[i], arr_d[i], atol + rtol * std::abs(ref_o[i]));
 	}
 	
 	HWY_NOINLINE void ValidateForwardAdjoint(
@@ -186,22 +186,22 @@ namespace HWY_NAMESPACE {
 		
 		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
 
-		const size_t N_o = len / 2;
-		const size_t N_e = len - N_o;
+		const size_t N_d = len / 2;
+		const size_t N_s = len - N_d;
 
 		const size_t Nt = len * nv;
-		const size_t Nt_o = N_o * nv;
-		const size_t Nt_e = N_e * nv;
+		const size_t Nt_d = N_d * nv;
+		const size_t Nt_s = N_s * nv;
 
 		auto alligned_u = hwy::AllocateAligned<prec>(Nt);
 		auto u = std::span(alligned_u.get(), Nt);
-		auto u_e = std::span(u.begin(), Nt_e);
-		auto u_o = std::span(&u[Nt_e], Nt_o);
+		auto u_s = std::span(u.begin(), Nt_s);
+		auto u_d = std::span(&u[Nt_s], Nt_d);
 
 		auto alligned_v = hwy::AllocateAligned<prec>(Nt);
 		auto v = std::span(alligned_v.get(), Nt);
-		auto v_e = std::span(v.begin(), Nt_e);
-		auto v_o = std::span(&v[Nt_e], Nt_o);
+		auto v_s = std::span(v.begin(), Nt_s);
+		auto v_d = std::span(&v[Nt_s], Nt_d);
 
 		auto alligned_ref_u = hwy::AllocateAligned<prec>(Nt);
 		auto ref_u = std::span(alligned_ref_u.get(), Nt);
@@ -217,10 +217,10 @@ namespace HWY_NAMESPACE {
 			lfd::deinterleave(detail::Along(), &ref_u[0], &u[0], len);
 		}
 
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::Forward, ax, bc, &u_e[0], &u_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Forward, ax, bc, &u_s[0], &u_d[0], N_s, N_d);
 		prec v_Fu = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::ForwardAdjoint, ax, bc, &v_e[0], &v_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::ForwardAdjoint, ax, bc, &v_s[0], &v_d[0], N_s, N_d);
 
 		if(is_vec){
 			lfd::interleave(detail::Across(), &v[0], &v_out[0], len);
@@ -247,22 +247,22 @@ namespace HWY_NAMESPACE {
 		
 		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
 
-		const size_t N_o = len / 2;
-		const size_t N_e = len - N_o;
+		const size_t N_d = len / 2;
+		const size_t N_s = len - N_d;
 
 		const size_t Nt = len * nv;
-		const size_t Nt_o = N_o * nv;
-		const size_t Nt_e = N_e * nv;
+		const size_t Nt_d = N_d * nv;
+		const size_t Nt_s = N_s * nv;
 
 		auto alligned_u = hwy::AllocateAligned<prec>(Nt);
 		auto u = std::span(alligned_u.get(), Nt);
-		auto u_e = std::span(u.begin(), Nt_e);
-		auto u_o = std::span(&u[Nt_e], Nt_o);
+		auto u_s = std::span(u.begin(), Nt_s);
+		auto u_d = std::span(&u[Nt_s], Nt_d);
 
 		auto alligned_v = hwy::AllocateAligned<prec>(Nt);
 		auto v = std::span(alligned_v.get(), Nt);
-		auto v_e = std::span(v.begin(), Nt_e);
-		auto v_o = std::span(&v[Nt_e], Nt_o);
+		auto v_s = std::span(v.begin(), Nt_s);
+		auto v_d = std::span(&v[Nt_s], Nt_d);
 
 		auto alligned_ref_u = hwy::AllocateAligned<prec>(Nt);
 		auto ref_u = std::span(alligned_ref_u.get(), Nt);
@@ -278,10 +278,10 @@ namespace HWY_NAMESPACE {
 			lfd::deinterleave(detail::Along(), &ref_u[0], &u[0], len);
 		}
 
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::Inverse, ax, bc, &u_e[0], &u_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Inverse, ax, bc, &u_s[0], &u_d[0], N_s, N_d);
 		prec v_Fu = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::InverseAdjoint, ax, bc, &v_e[0], &v_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::InverseAdjoint, ax, bc, &v_s[0], &v_d[0], N_s, N_d);
 
 		if(is_vec){
 			lfd::interleave(detail::Across(), &v[0], &v_out[0], len);
@@ -308,30 +308,30 @@ namespace HWY_NAMESPACE {
 		
 		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
 
-		const size_t N_o = len / 2;
-		const size_t N_e = len - N_o;
+		const size_t N_d = len / 2;
+		const size_t N_s = len - N_d;
 
 		const size_t Nt = len * nv;
-		const size_t Nt_o = N_o * nv;
-		const size_t Nt_e = N_e * nv;
+		const size_t Nt_d = N_d * nv;
+		const size_t Nt_s = N_s * nv;
 
 		auto alligned_u = hwy::AllocateAligned<prec>(Nt);
 		auto u = std::span(alligned_u.get(), Nt);
-		auto u_e = std::span(u.begin(), Nt_e);
-		auto u_o = std::span(&u[Nt_e], Nt_o);
+		auto u_s = std::span(u.begin(), Nt_s);
+		auto u_d = std::span(&u[Nt_s], Nt_d);
 
 		auto alligned_v = hwy::AllocateAligned<prec>(Nt);
 		auto v = std::span(alligned_v.get(), Nt);
-		auto v_e = std::span(v.begin(), Nt_e);
-		auto v_o = std::span(&v[Nt_e], Nt_o);
+		auto v_s = std::span(v.begin(), Nt_s);
+		auto v_d = std::span(&v[Nt_s], Nt_d);
 
 		detail::fill_sin(v, -255.0, 442.0);
 		detail::fill_sin(u, -200.0, 200.0);
 
 		prec v_dot_u = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::Forward, ax, bc, &u_e[0], &u_o[0], N_e, N_o);
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::InverseAdjoint, ax, bc, &v_e[0], &v_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Forward, ax, bc, &u_s[0], &u_d[0], N_s, N_d);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::InverseAdjoint, ax, bc, &v_s[0], &v_d[0], N_s, N_d);
 
 		prec vw_dot_uw = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
@@ -353,30 +353,30 @@ namespace HWY_NAMESPACE {
 		
 		const size_t nv = (is_vec)? hn::Lanes(hn::ScalableTag<prec>()) : 1;
 
-		const size_t N_o = len / 2;
-		const size_t N_e = len - N_o;
+		const size_t N_d = len / 2;
+		const size_t N_s = len - N_d;
 
 		const size_t Nt = len * nv;
-		const size_t Nt_o = N_o * nv;
-		const size_t Nt_e = N_e * nv;
+		const size_t Nt_d = N_d * nv;
+		const size_t Nt_s = N_s * nv;
 
 		auto alligned_u = hwy::AllocateAligned<prec>(Nt);
 		auto u = std::span(alligned_u.get(), Nt);
-		auto u_e = std::span(u.begin(), Nt_e);
-		auto u_o = std::span(&u[Nt_e], Nt_o);
+		auto u_s = std::span(u.begin(), Nt_s);
+		auto u_d = std::span(&u[Nt_s], Nt_d);
 
 		auto alligned_v = hwy::AllocateAligned<prec>(Nt);
 		auto v = std::span(alligned_v.get(), Nt);
-		auto v_e = std::span(v.begin(), Nt_e);
-		auto v_o = std::span(&v[Nt_e], Nt_o);
+		auto v_s = std::span(v.begin(), Nt_s);
+		auto v_d = std::span(&v[Nt_s], Nt_d);
 
 		detail::fill_sin(v, -255.0, 442.0);
 		detail::fill_sin(u, -200.0, 200.0);
 
 		prec v_dot_u = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::ForwardAdjoint, ax, bc, &u_e[0], &u_o[0], N_e, N_o);
-		lfd::test_transform_dispatch<prec>(wvlt, Transform::Inverse, ax, bc, &v_e[0], &v_o[0], N_e, N_o);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::ForwardAdjoint, ax, bc, &u_s[0], &u_d[0], N_s, N_d);
+		lfd::test_transform_dispatch<prec>(wvlt, Transform::Inverse, ax, bc, &v_s[0], &v_d[0], N_s, N_d);
 
 		prec vw_dot_uw = std::inner_product(u.begin(), u.end(), v.begin(), 0.0);
 
