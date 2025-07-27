@@ -7,13 +7,11 @@
 #include "lifted.hpp"
 #include "lifted-inl.hpp"
 
-HWY_BEFORE_NAMESPACE();
 namespace lifted{
 namespace HWY_NAMESPACE{
     auto& lwt_float = lifting_transform<float>;
 }
 }
-HWY_AFTER_NAMESPACE();
 
 #if HWY_ONCE
 namespace lifted{
