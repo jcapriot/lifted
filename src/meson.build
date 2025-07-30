@@ -31,15 +31,10 @@ lifted_lib = library(
 	install: true
 )
 
-complie_with_args = []
-if not_static_build
-	complie_with_args += ['-DLIFTED_SHARED_DEFINE']
-endif
-
 lifted_lib_dep = declare_dependency(
 	include_directories: lifted_inc,
 	link_with: lifted_lib,
-	compile_args: complie_with_args
+	compile_args: not_static_build? ['-DLIFTED_SHARED_DEFINE'] : []
 )
 
 if get_option('python_install')

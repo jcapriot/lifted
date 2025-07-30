@@ -16,16 +16,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-            python-version: '3.13'
-
       - name: Install build requirements
-        run: python -m pip install meson ninja
+        run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dbuild_tests=True -Dvsenv=True
+        run: meson setup builddir -Dtests=True -Dvsenv=True
         env:
           CXX: cl
           CC: cl
@@ -58,28 +53,26 @@ jobs:
       - name: Install build requirements
         run: conda install --yes -c conda-forge meson ninja dpcpp_win-64=2025.1 pkg-config
 
+      - name: Append to LIB and LIBRARY_PATH
+        run: |
+          "LIB=`$env:CONDA_PREFIX\Library\lib;`$env:LIB" >> $env:GITHUB_ENV
+          "LIBRARY_PATH=`$env:CONDA_PREFIX\Library\lib;`$env:LIBRARY_PATH" >> $env:GITHUB_ENV
+
         # Appending conda's library path to the LIB and LIBRARY_PATH environment variables...
       - name: Configure Build
         run: |
-            $env:LIB = "$env:CONDA_PREFIX\Library\lib;" + $env:LIB
-            $env:LIBRARY_PATH = "$env:CONDA_PREFIX\Library\lib;" + $env:LIBRARY_PATH
-            meson setup builddir -Dbuild_tests=True -Dvsenv=True
+            meson setup builddir -Dtests=True -Dvsenv=True
         env:
           CXX: icx-cl
           CC: icx-cl
 
       - name: List Build Targets
         run: |
-        
-            $env:LIB = "$env:CONDA_PREFIX\Library\lib;" + $env:LIB
-            $env:LIBRARY_PATH = "$env:CONDA_PREFIX\Library\lib;" + $env:LIBRARY_PATH
             meson compile -C builddir -v subprojects/highway/hwy_list_targets
             builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
         run: |
-            $env:LIB = "$env:CONDA_PREFIX\Library\lib;" + $env:LIB
-            $env:LIBRARY_PATH = "$env:CONDA_PREFIX\Library\lib;" + $env:LIBRARY_PATH
             meson compile -C builddir -v
 
       - name: Test
@@ -94,16 +87,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-            python-version: '3.13'
-
       - name: Install build requirements
-        run: python -m pip install meson ninja
+        run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dbuild_tests=True -Dvsenv=True
+        run: meson setup builddir -Dtests=True -Dvsenv=True
         env:
           CXX: clang-cl
           CC: clang-cl
@@ -131,16 +119,11 @@ jobs:
       - name: Install GNU compiler
         run: sudo apt install g++-14
 
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-            python-version: '3.13'
-
       - name: Install build requirements
-        run: python -m pip install meson ninja
+        run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dbuild_tests=True
+        run: meson setup builddir -Dtests=True
         env:
           CXX: g++-14
 
@@ -167,16 +150,11 @@ jobs:
       - name: Install LLVM compiler
         run: sudo apt install clang-18
 
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-            python-version: '3.13'
-
       - name: Install build requirements
-        run: python -m pip install meson ninja
+        run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dbuild_tests=True
+        run: meson setup builddir -Dtests=True
         env:
           CXX: clang++-18
           CC: clang-18
@@ -218,7 +196,7 @@ jobs:
           conda list
 
       - name: Configure Build
-        run: meson setup builddir -Dbuild_tests=True
+        run: meson setup builddir -Dtests=True
         env:
           CXX: icx
           CC: icx
@@ -247,16 +225,11 @@ jobs:
       - name: Install GNU compiler
         run: brew install gcc@15
 
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-            python-version: '3.13'
-
       - name: Install build requirements
-        run: python -m pip install meson ninja
+        run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dbuild_tests=True
+        run: meson setup builddir -Dtests=True
         env:
           CXX: g++-15
           CC: gcc-15
@@ -281,16 +254,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-            python-version: '3.13'
-
       - name: Install build requirements
-        run: python -m pip install meson ninja
+        run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dbuild_tests=True
+        run: meson setup builddir -Dtests=True
 
       - name: List Build Targets
         run: |
@@ -315,16 +283,11 @@ jobs:
       - name: Install LLVM compiler
         run: brew install llvm@20 lld@20
 
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-            python-version: '3.13'
-
       - name: Install build requirements
-        run: python -m pip install meson ninja
+        run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dbuild_tests=True
+        run: meson setup builddir -Dtests=True
         env:
           CXX: /opt/homebrew/opt/llvm/bin/clang++
           CC: /opt/homebrew/opt/llvm/bin/clang

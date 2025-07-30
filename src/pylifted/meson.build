@@ -19,11 +19,9 @@ np_dep = dependency('numpy')
 cython_cpp_args = [numpy_nodepr_api]
 
 if 'msvc' in cpp_id
-	cython_cpp_args = [cython_cpp_args, '/bigobj', '/arch:AVX2']
-
+	cython_cpp_args = [cython_cpp_args, '/bigobj']
 elif 'intel' in cpp_id
-	cython_cpp_args = [cython_cpp_args, '-march=native']
-
+	cython_cpp_args = [cython_cpp_args]
 endif
 
 cython_args = []
