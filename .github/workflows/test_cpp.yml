@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   windows_x86_64:
@@ -48,7 +51,7 @@ jobs:
         run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dvsenv=True ${{ matrix.extra_meson_args }}
+        run: meson setup builddir -Dvsenv=True ${{ matrix.extra_setup_args }}
         env:
           CXX: ${{ matrix.cxx_compiler }}
           CC:  ${{ matrix.c_compiler }}
@@ -59,10 +62,10 @@ jobs:
             builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
-        run: meson compile -C builddir -v
+        run: meson compile -C builddir -v ${{ matrix.extra_compile_args }}
 
       - name: Test
-        run: meson test -C builddir --print-errorlogs
+        run: meson test -C builddir --print-errorlogs ${{ matrix.extra_test_args }}
 
   ubuntu:
     name: Testing ${{ matrix.compiler }} on Ubuntu
@@ -78,7 +81,7 @@ jobs:
             cxx_compiler: g++-14
             c_compiler: gcc-14
             extra_deps: g++-14
-            extra_meson_args: -j 2
+            extra_compile_args: -j 2
           
           - compiler: LLVM
             cxx_compiler: clang++-18
@@ -114,7 +117,7 @@ jobs:
         run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir ${{ matrix.extra_meson_args }}
+        run: meson setup builddir ${{ matrix.extra_setup_args }}
         env:
           CXX: ${{ matrix.cxx_compiler }}
           CC: ${{ matrix.c_compiler }}
@@ -125,10 +128,10 @@ jobs:
             builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
-        run: meson compile -C builddir -v
+        run: meson compile -C builddir -v ${{ matrix.extra_compile_args }}
 
       - name: Test
-        run: meson test -C builddir --print-errorlogs
+        run: meson test -C builddir --print-errorlogs ${{ matrix.extra_test_args }}
 
   mac_os:
     name: Testing ${{ matrix.compiler }} on MacOS
@@ -165,7 +168,7 @@ jobs:
         run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir ${{ matrix.extra_meson_args }}
+        run: meson setup builddir ${{ matrix.extra_setup_args }}
         env:
           CXX: ${{ matrix.cxx_compiler }}
           CC: ${{ matrix.c_compiler }}
@@ -176,7 +179,7 @@ jobs:
             builddir/subprojects/highway/hwy_list_targets
 
       - name: Build
-        run: meson compile -C builddir -v
+        run: meson compile -C builddir -v ${{ matrix.extra_compile_args }}
 
       - name: Test
-        run: meson test -C builddir --print-errorlogs
+        run: meson test -C builddir --print-errorlogs ${{ matrix.extra_test_args }}
