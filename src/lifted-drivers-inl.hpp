@@ -440,7 +440,7 @@ namespace HWY_NAMESPACE {
         auto shape_ = size_v(ndim);
         auto stride_in_ = stride_v(ndim);
         auto stride_out_ = stride_v(ndim);
-        for(auto i = 0; i < ndim; ++i){
+        for(size_t i = 0; i < ndim; ++i){
             const size_t i_ax = stride_order[i];
             shape_[i] = shape[i_ax];
             stride_in_[i] = stride_in[i_ax];
@@ -449,7 +449,7 @@ namespace HWY_NAMESPACE {
         
         const size_t n_ax = axes.size();
         auto axes_ = size_v(n_ax);
-        for(auto i = 0; i < n_ax; ++i){
+        for(size_t i = 0; i < n_ax; ++i){
             axes_[i] = stride_order[axes[i]];
         }
 
