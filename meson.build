@@ -22,8 +22,6 @@ endif
 if cpp.get_argument_syntax() == 'msvc'
 	add_project_arguments(
 		'/bigobj',
-        # Dissable run-time type information.
-        '/GR-',
 		language: 'cpp'
 	)
 endif
