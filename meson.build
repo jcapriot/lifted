@@ -48,7 +48,7 @@ do_py_install = get_option('python_install')
 subdir('src')
 
 enable_tests = get_option('tests').disable_auto_if(do_py_install).allowed()
-enable_bench = get_option('benchmarks').disable_auto_if(do_py_install).allowed()
+enable_bench = get_option('benchmarks').enabled()
 
 if enable_tests
 	subdir('tests')

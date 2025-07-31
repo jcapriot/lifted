@@ -13,7 +13,7 @@ highway_bench = executable(
 	'wavelet_highway', 
 	'wavelet_highway.cpp',
 	dependencies : [gbench_dep, gbench_main_dep, lifted_hdr_dep, hwy_dep],
-    cpp_args: extra_cpp_args
+    cpp_args: extra_cpp_args,
 )
 
 benchmark('wavelet_highway', highway_bench)

@@ -34,7 +34,7 @@ jobs:
         run: meson compile -C builddir -v
 
       - name: Test
-        run: meson test -C builddir -vv
+        run: meson test -C builddir --print-errorlogs
 
   Intel_Win: 
     runs-on: windows-latest
@@ -53,7 +53,7 @@ jobs:
       - name: Install build requirements
         run: conda install --yes -c conda-forge meson ninja dpcpp_win-64=2025.1 pkg-config
 
-      - name: Append to LIB and LIBRARY_PATH
+      - name: Prepend to LIB and LIBRARY_PATH
         run: |
           "LIB=$env:CONDA_PREFIX\Library\lib;$env:LIB" >> $env:GITHUB_ENV
           "LIBRARY_PATH=$env:CONDA_PREFIX\Library\lib;$env:LIBRARY_PATH" >> $env:GITHUB_ENV
@@ -63,7 +63,7 @@ jobs:
         run: |
             echo $env:LIB
             echo $env:LIBRARY_PATH
-            meson setup builddir -Dtests=True -Dvsenv=True
+            meson setup builddir -Dvsenv=True
         env:
           CXX: icx-cl
           CC: icx-cl
@@ -78,7 +78,7 @@ jobs:
             meson compile -C builddir -v
 
       - name: Test
-        run: meson test -C builddir -vv
+        run: meson test -C builddir --print-errorlogs
 
   CLANG_Win:
     runs-on: windows-latest
@@ -93,7 +93,7 @@ jobs:
         run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dtests=True -Dvsenv=True
+        run: meson setup builddir -Dvsenv=True
         env:
           CXX: clang-cl
           CC: clang-cl
@@ -107,7 +107,7 @@ jobs:
         run: meson compile -C builddir -v
 
       - name: Test
-        run: meson test -C builddir -vv
+        run: meson test -C builddir --print-errorlogs
   
   GNU_UBUNTU:
     name: G++ on ubuntu
@@ -125,7 +125,7 @@ jobs:
         run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dtests=True
+        run: meson setup builddir
         env:
           CXX: g++-14
 
@@ -138,7 +138,7 @@ jobs:
         run: meson compile -C builddir -v -j 1
 
       - name: Test
-        run: meson test -C builddir -vv
+        run: meson test -C builddir --print-errorlogs
 
   LLVM_UBUNTU:
     name: LLVM on ubuntu
@@ -156,7 +156,7 @@ jobs:
         run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dtests=True
+        run: meson setup builddir
         env:
           CXX: clang++-18
           CC: clang-18
@@ -170,7 +170,7 @@ jobs:
         run: meson compile -C builddir -v
 
       - name: Test
-        run: meson test -C builddir -vv
+        run: meson test -C builddir --print-errorlogs
 
   INTEL_UBUNTU:
     name: Intel on ubuntu
@@ -198,7 +198,7 @@ jobs:
           conda list
 
       - name: Configure Build
-        run: meson setup builddir -Dtests=True
+        run: meson setup builddir
         env:
           CXX: icx
           CC: icx
@@ -213,7 +213,7 @@ jobs:
         run: meson compile -C builddir -v
 
       - name: Test
-        run: meson test -C builddir -vv
+        run: meson test -C builddir --print-errorlogs
 
   GNU_MAC:
     name: G++ on MacOS
@@ -231,7 +231,7 @@ jobs:
         run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dtests=True
+        run: meson setup builddir
         env:
           CXX: g++-15
           CC: gcc-15
@@ -245,7 +245,7 @@ jobs:
         run: meson compile -C builddir -v
 
       - name: Test
-        run: meson test -C builddir -vv
+        run: meson test -C builddir --print-errorlogs
 
   APPLE_LLVM:
     name: Apple LLVM
@@ -260,7 +260,7 @@ jobs:
         run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dtests=True
+        run: meson setup builddir
 
       - name: List Build Targets
         run: |
@@ -271,7 +271,7 @@ jobs:
         run: meson compile -C builddir -v
 
       - name: Test
-        run: meson test -C builddir -vv
+        run: meson test -C builddir --print-errorlogs
 
   LLVM_MAC:
     name: LLVM on MacOS
@@ -289,7 +289,7 @@ jobs:
         run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dtests=True
+        run: meson setup builddir
         env:
           CXX: /opt/homebrew/opt/llvm/bin/clang++
           CC: /opt/homebrew/opt/llvm/bin/clang
@@ -303,7 +303,7 @@ jobs:
         run: meson compile -C builddir -v
 
       - name: Test
-        run: meson test -C builddir -vv
+        run: meson test -C builddir --print-errorlogs
 
 
            
