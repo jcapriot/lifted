@@ -37,6 +37,6 @@ lifted_lib_dep = declare_dependency(
 	compile_args: not_static_build? ['-DLIFTED_SHARED_DEFINE'] : []
 )
 
-if get_option('python_install')
+if do_py_install
     subdir('pylifted')
 endif

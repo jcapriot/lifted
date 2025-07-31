@@ -6,6 +6,7 @@ project(
 		'buildtype=release',
 		'b_ndebug=if-release',
 		'cpp_std=c++20',
+		'cpp_rtti=false',
 	],
 	meson_version: '>=1.3',
 )
@@ -31,7 +32,7 @@ hwy = subproject(
 	'highway', 
 	default_options: [
 		'default_library=static',
-		'enable_contrib=false',
+		'contrib=disabled',
 		'test_standalone=false',
 	]
 )
@@ -44,13 +45,18 @@ if not_static_build
 	export_defines += '-DLIFTED_SHARED_DEFINE'
 endif
 
+do_py_install = get_option('python_install')
+
 subdir('src')
 
-if get_option('tests')
+enable_tests = get_option('tests').disable_auto_if(do_py_install).allowed()
+enable_bench = get_option('benchmarks').disable_auto_if(do_py_install).allowed()
+
+if enable_tests
 	subdir('tests')
 endif
 
-if get_option('benchmarks')
+if enable_bench
 	gtest_proj = subproject('google-benchmark', default_options:{'default-library':'static'})
 	subdir('benchmarks')
 endif
