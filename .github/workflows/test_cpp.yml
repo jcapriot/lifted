@@ -7,38 +7,24 @@ on:
       - main
 
 jobs:
-  MSVC: 
+  windows_x86_64:
+    name: Testing ${{ matrix.compiler }} on Windows x86_64
     runs-on: windows-latest
-    name: MSVC Build Test
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+    strategy:
+      matrix:
+        include:
+          - compiler: MSVC
+            cxx_compiler: cl
+            c_compiler: cl
+          
+          - compiler: LLVM
+            cxx_compiler: clang-cl
+            c_compiler: clang-cl
 
-      - name: Install build requirements
-        run: pipx install meson
+          - compiler: INTEL
+            cxx_compiler: icx-cl
+            c_compiler: icx-cl
 
-      - name: Configure Build
-        run: meson setup builddir -Dvsenv=True
-        env:
-          CXX: cl
-          CC: cl
-
-      - name: List Build Targets
-        run: |
-            meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            builddir/subprojects/highway/hwy_list_targets
-
-      - name: Build
-        run: meson compile -C builddir -v
-
-      - name: Test
-        run: meson test -C builddir --print-errorlogs
-
-  Intel_Win: 
-    runs-on: windows-latest
-    name: Intel compiler on Windows
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,48 +32,17 @@ jobs:
           persist-credentials: false
 
       - uses: conda-incubator/setup-miniconda@v3
+        if: matrix.compiler == 'INTEL'
         with:
           activate-environment: intel
           python-version: 3.13
 
       - name: Install build requirements
-        run: conda install --yes -c conda-forge meson ninja dpcpp_win-64=2025.1 pkg-config
-
-      - name: Prepend to LIB and LIBRARY_PATH
+        if: matrix.compiler == 'INTEL'
         run: |
+          conda install --yes -c conda-forge dpcpp_win-64=2025.1 pkg-config
           "LIB=$env:CONDA_PREFIX\Library\lib;$env:LIB" >> $env:GITHUB_ENV
           "LIBRARY_PATH=$env:CONDA_PREFIX\Library\lib;$env:LIBRARY_PATH" >> $env:GITHUB_ENV
-
-        # Appending conda's library path to the LIB and LIBRARY_PATH environment variables...
-      - name: Configure Build
-        run: |
-            echo $env:LIB
-            echo $env:LIBRARY_PATH
-            meson setup builddir -Dvsenv=True
-        env:
-          CXX: icx-cl
-          CC: icx-cl
-
-      - name: List Build Targets
-        run: |
-            meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            builddir/subprojects/highway/hwy_list_targets
-
-      - name: Build
-        run: |
-            meson compile -C builddir -v
-
-      - name: Test
-        run: meson test -C builddir --print-errorlogs
-
-  CLANG_Win:
-    runs-on: windows-latest
-    name: LLVM on Windows
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
       - name: Install build requirements
         run: pipx install meson
@@ -95,8 +50,8 @@ jobs:
       - name: Configure Build
         run: meson setup builddir -Dvsenv=True
         env:
-          CXX: clang-cl
-          CC: clang-cl
+          CXX: ${{ matrix.cxx_compiler }}
+          CC:  ${{ matrix.c_compiler }}
 
       - name: List Build Targets
         run: |
