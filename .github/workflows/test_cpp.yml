@@ -55,12 +55,14 @@ jobs:
 
       - name: Append to LIB and LIBRARY_PATH
         run: |
-          "LIB=`$env:CONDA_PREFIX\Library\lib;`$env:LIB" >> $env:GITHUB_ENV
-          "LIBRARY_PATH=`$env:CONDA_PREFIX\Library\lib;`$env:LIBRARY_PATH" >> $env:GITHUB_ENV
+          "LIB=$env:CONDA_PREFIX\Library\lib;$env:LIB" >> $env:GITHUB_ENV
+          "LIBRARY_PATH=$env:CONDA_PREFIX\Library\lib;$env:LIBRARY_PATH" >> $env:GITHUB_ENV
 
         # Appending conda's library path to the LIB and LIBRARY_PATH environment variables...
       - name: Configure Build
         run: |
+            echo $env:LIB
+            echo $env:LIBRARY_PATH
             meson setup builddir -Dtests=True -Dvsenv=True
         env:
           CXX: icx-cl
