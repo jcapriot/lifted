@@ -109,100 +109,120 @@ jobs:
       - name: Test
         run: meson test -C builddir --print-errorlogs
   
-  GNU_UBUNTU:
-    name: G++ on ubuntu
+  # GNU_UBUNTU:
+  #   name: G++ on ubuntu
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         persist-credentials: false
+
+  #     - name: Install GNU compiler
+  #       run: sudo apt install g++-14
+
+  #     - name: Install build requirements
+  #       run: pipx install meson
+
+  #     - name: Configure Build
+  #       run: meson setup builddir
+  #       env:
+  #         CXX: g++-14
+
+  #     - name: List Build Targets
+  #       run: |
+  #           meson compile -C builddir -v subprojects/highway/hwy_list_targets
+  #           builddir/subprojects/highway/hwy_list_targets
+
+  #     - name: Build
+  #       run: meson compile -C builddir -v -j 1
+
+  #     - name: Test
+  #       run: meson test -C builddir --print-errorlogs
+
+  # LLVM_UBUNTU:
+  #   name: LLVM on ubuntu
+  #   runs-on: ubuntu-latest
+
+  # INTEL_UBUNTU:
+  #   name: Intel on ubuntu
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         persist-credentials: false
+
+  #     - uses: conda-incubator/setup-miniconda@v3
+  #       with:
+  #         activate-environment: intel
+  #         python-version: 3.13
+
+  #     - name: Install build requirements
+  #       run: conda install --yes -c conda-forge meson ninja dpcpp_linux-64=2025.1
+
+  #     - name: Conda Environment info
+  #       run: |
+  #         conda info
+  #         conda list
+
+  #     - name: Configure Build
+  #       run: meson setup builddir
+  #       env:
+  #         CXX: icx
+  #         CC: icx
+  #         LDFLAGS: -lpthread
+
+  #     - name: List Build Targets
+  #       run: |
+  #           meson compile -C builddir -v subprojects/highway/hwy_list_targets
+  #           builddir/subprojects/highway/hwy_list_targets
+
+  #     - name: Build
+  #       run: meson compile -C builddir -v
+
+  #     - name: Test
+  #       run: meson test -C builddir --print-errorlogs
+
+  ubuntu:
     runs-on: ubuntu-latest
+    name: Testing ${{ matrix.compiler }} on ubuntu.
+    strategy:
+      matrix:
+        compiler: [GNU, LLVM, INTEL]
+        include:
+          - compiler: GNU
+            CXX: g++-14
+            CC: gcc-14
+            extra_deps: g++-14
+          
+          - compiler: LLVM
+            CXX: clang++-18
+            CC: clang-18
+            extra_deps: clang-18
+
+          - compiler: INTEL
+            CXX: icx
+            CC: icx
+            extra_deps: intel-cpp-essentials
+      
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Install GNU compiler
-        run: sudo apt install g++-14
+      - name: Install ${{ matrix.compiler }} compiler
+        run: sudo apt install ${{ matrix.extra_deps }}
 
       - name: Install build requirements
         run: pipx install meson
 
       - name: Configure Build
         run: meson setup builddir
-        env:
-          CXX: g++-14
-
-      - name: List Build Targets
-        run: |
-            meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            builddir/subprojects/highway/hwy_list_targets
-
-      - name: Build
-        run: meson compile -C builddir -v -j 1
-
-      - name: Test
-        run: meson test -C builddir --print-errorlogs
-
-  LLVM_UBUNTU:
-    name: LLVM on ubuntu
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Install LLVM compiler
-        run: sudo apt install clang-18
-
-      - name: Install build requirements
-        run: pipx install meson
-
-      - name: Configure Build
-        run: meson setup builddir
-        env:
-          CXX: clang++-18
-          CC: clang-18
-
-      - name: List Build Targets
-        run: |
-            meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            builddir/subprojects/highway/hwy_list_targets
-
-      - name: Build
-        run: meson compile -C builddir -v
-
-      - name: Test
-        run: meson test -C builddir --print-errorlogs
-
-  INTEL_UBUNTU:
-    name: Intel on ubuntu
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - uses: conda-incubator/setup-miniconda@v3
-        with:
-          activate-environment: intel
-          python-version: 3.13
-
-      - name: Install build requirements
-        run: conda install --yes -c conda-forge meson ninja dpcpp_linux-64=2025.1
-
-      - name: Conda Environment info
-        run: |
-          conda info
-          conda list
-
-      - name: Configure Build
-        run: meson setup builddir
-        env:
-          CXX: icx
-          CC: icx
-          LDFLAGS: -lpthread
 
       - name: List Build Targets
         run: |
