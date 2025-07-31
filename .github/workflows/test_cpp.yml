@@ -118,28 +118,24 @@ jobs:
         compiler: [GNU, LLVM, INTEL]
         include:
           - compiler: GNU
-            CXX: g++-14
-            CC: gcc-14
+            cxx_compiler: g++-14
+            c_compiler: gcc-14
             extra_deps: g++-14
           
           - compiler: LLVM
-            CXX: clang++-18
-            CC: clang-18
+            cxx_compiler: clang++-18
+            c_compiler: clang-18
             extra_deps: clang-18
 
           - compiler: INTEL
-            CXX: icx
-            CC: icx
+            cxx_compiler: icx
+            c_compiler: icx
       
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-
-      - name: Install ${{ matrix.compiler }} compiler
-        run: sudo apt install ${{ matrix.extra_deps }}
-        if: matrix.compiler != 'INTEL'
 
       - uses: conda-incubator/setup-miniconda@v3
         if: matrix.compiler == 'INTEL'
@@ -149,14 +145,21 @@ jobs:
           channels: conda-forge
 
       - name: Install ${{ matrix.compiler }} compiler
-        if: matrix.compiler == 'INTEL'
-        run: conda install --yes -c conda-forge dpcpp_linux-64=2025.1
+        run: |
+          if [ "${{ matrix.compiler }}" = "INTEL" ]; then
+            conda install --yes -c conda-forge dpcpp_linux-64=2025.1
+          else
+            sudo apt install ${{ matrix.extra_deps }}
+          fi
 
       - name: Install build requirements
         run: pipx install meson
 
       - name: Configure Build
         run: meson setup builddir
+        env:
+          CXX: ${{ matrix.cxx_compiler }}
+          CC: ${{ matrix.c_compiler }}
 
       - name: List Build Targets
         run: |
