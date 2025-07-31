@@ -6,7 +6,7 @@ on:
     branches:
       - main
 
-jobs: 
+jobs:
   MSVC: 
     runs-on: windows-latest
     name: MSVC Build Test
@@ -118,7 +118,6 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        compiler: [GNU, LLVM, INTEL]
         include:
           - compiler: GNU
             cxx_compiler: g++-14
@@ -131,7 +130,7 @@ jobs:
             extra_deps: clang-18
 
           - compiler: INTEL
-            cxx_compiler: icx
+            cxx_compiler: icpx
             c_compiler: icx
       
     steps:
@@ -175,8 +174,26 @@ jobs:
       - name: Test
         run: meson test -C builddir --print-errorlogs
 
-  GNU_MAC:
-    name: G++ on MacOS
+  mac_os:
+    name: Testing ${{ matrix.compiler }} on MacOS
+    continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          - compiler: GNU
+            cxx_compiler: g++-14
+            c_compiler: gcc-14
+            extra_deps: gcc@15
+          
+          - compiler: LLVM
+            cxx_compiler: /opt/homebrew/opt/llvm/bin/clang++
+            c_compiler: /opt/homebrew/opt/llvm/bin/clang
+            extra_deps: llvm@20 lld@20
+
+          - compiler: Apple
+            cxx_compiler: clang++
+            c_compiler: clang
+
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -184,8 +201,9 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install GNU compiler
-        run: brew install gcc@15
+      - name: Install ${{ matrix.compiler }} compiler
+        if: matrix.compiler != 'APPLE'
+        run: brew install ${{ matrix.extra_deps }}
 
       - name: Install build requirements
         run: pipx install meson
@@ -193,8 +211,8 @@ jobs:
       - name: Configure Build
         run: meson setup builddir
         env:
-          CXX: g++-15
-          CC: gcc-15
+          CXX: ${{ matrix.cxx_compiler }}
+          CC: ${{ matrix.c_compiler }}
 
       - name: List Build Targets
         run: |
@@ -206,65 +224,3 @@ jobs:
 
       - name: Test
         run: meson test -C builddir --print-errorlogs
-
-  APPLE_LLVM:
-    name: Apple LLVM
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Install build requirements
-        run: pipx install meson
-
-      - name: Configure Build
-        run: meson setup builddir
-
-      - name: List Build Targets
-        run: |
-            meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            builddir/subprojects/highway/hwy_list_targets
-
-      - name: Build
-        run: meson compile -C builddir -v
-
-      - name: Test
-        run: meson test -C builddir --print-errorlogs
-
-  LLVM_MAC:
-    name: LLVM on MacOS
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Install LLVM compiler
-        run: brew install llvm@20 lld@20
-
-      - name: Install build requirements
-        run: pipx install meson
-
-      - name: Configure Build
-        run: meson setup builddir
-        env:
-          CXX: /opt/homebrew/opt/llvm/bin/clang++
-          CC: /opt/homebrew/opt/llvm/bin/clang
-
-      - name: List Build Targets
-        run: |
-            meson compile -C builddir -v subprojects/highway/hwy_list_targets
-            builddir/subprojects/highway/hwy_list_targets
-
-      - name: Build
-        run: meson compile -C builddir -v
-
-      - name: Test
-        run: meson test -C builddir --print-errorlogs
-
-
-           
-        
