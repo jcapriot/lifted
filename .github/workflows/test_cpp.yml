@@ -20,7 +20,7 @@ jobs:
         run: pipx install meson
 
       - name: Configure Build
-        run: meson setup builddir -Dtests=True -Dvsenv=True
+        run: meson setup builddir -Dvsenv=True
         env:
           CXX: cl
           CC: cl
