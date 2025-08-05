@@ -11,6 +11,10 @@ project(
 	meson_version: '>=1.3',
 )
 
+do_py_install = get_option('python_install')
+enable_tests = get_option('tests').disable_auto_if(do_py_install or meson.is_subproject()).allowed()
+enable_bench = get_option('benchmarks').enabled()
+
 cpp = meson.get_compiler('cpp')
 cpp_id = cpp.get_id()
 
@@ -31,7 +35,7 @@ hwy = subproject(
 	default_options: [
 		'default_library=static',
 		'contrib=disabled',
-		'test_standalone=false',
+		'test_standalone=' + enable_tests? 'false' : 'true',
 	]
 )
 hwy_dep = hwy.get_variable('hwy_dep')
@@ -43,12 +47,7 @@ if not_static_build
 	export_defines += '-DLIFTED_SHARED_DEFINE'
 endif
 
-do_py_install = get_option('python_install')
-
 subdir('src')
-
-enable_tests = get_option('tests').disable_auto_if(do_py_install).allowed()
-enable_bench = get_option('benchmarks').enabled()
 
 if enable_tests
 	subdir('tests')
