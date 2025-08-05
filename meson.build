@@ -35,7 +35,7 @@ hwy = subproject(
 	default_options: [
 		'default_library=static',
 		'contrib=disabled',
-		'test_standalone=' + enable_tests? 'false' : 'true',
+		'test_standalone=' + (enable_tests? 'false' : 'true'),
 	]
 )
 hwy_dep = hwy.get_variable('hwy_dep')
