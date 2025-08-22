@@ -1,9 +1,9 @@
 [wrap-git]
-url = https://github.com/jcapriot/highway.git
+url = https://github.com/google/highway.git
 revision = HEAD
 depth = 1
 
 [provide]
-hwy = hwy_dep
-hwy_contrib = hwy_contrib_dep
-hwy_test = hwy_test_dep
+libhwy = hwy_dep
+libhwy_contrib = hwy_contrib_dep
+libhwy_test = hwy_test_dep

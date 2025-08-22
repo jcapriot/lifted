@@ -7,6 +7,8 @@ project(
 		'b_ndebug=if-release',
 		'cpp_std=c++20',
 		'cpp_rtti=false',
+		'highway:contrib=disabled',
+		'highway:default_library=static',
 	],
 	meson_version: '>=1.3',
 )
@@ -33,8 +35,6 @@ endif
 hwy = subproject(
 	'highway', 
 	default_options: [
-		'default_library=static',
-		'contrib=disabled',
 		'test_standalone=' + (enable_tests? 'false' : 'true'),
 	]
 )
