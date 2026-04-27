@@ -1,3 +1,0 @@
-[submodule "subprojects/highway"]
-	path = subprojects/highway
-	url = https://github.com/google/highway.git

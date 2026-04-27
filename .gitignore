@@ -358,6 +358,8 @@ subprojects/googletest-1.15.2/
 subprojects/benchmark-1.8.4/
 
 subprojects/packagecache/
+subprojects/highway
+subprojects/.wraplock
 
 .idea/
 
